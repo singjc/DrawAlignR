@@ -79,7 +79,7 @@ ui <- fluidPage(
     
     sidebarPanel(
       
-      
+      # Chromatogram Input
       splitLayout(cellWidths = c("80%", "20%"),
                   #Select 1 or set of mzML files,
                   fileInput(inputId = "ChromatogramFile", "Choose a Chromatogram File", multiple = TRUE, accept = c(".mzML", ".sqMass")),
@@ -89,29 +89,53 @@ ui <- fluidPage(
       tags$style(type='text/css', "#ChromatogramFile { width:100%; margin-top: 25px;}"),
       tags$style(type='text/css', "#resetChromatogramFile { width:100%; margin-top: 25px;}"),
       
-      
-      # #Select 1 or set of mzML files
-      # fileInput(inputId = "ChromatogramFile", "Choose a Chromatogram File",
-      #             multiple = TRUE,
-      #             accept = c(".mzML", ".sqMass")),
-      # 
-      # ## Reset
-      # actionButton(inputId = "resetChromatogramFile", label = 'Reset'),
-      
-      #Select .pqp library file
-      fileInput(inputId = "LibraryFile", "Choose a Library File",
-                multiple = FALSE,
-                accept = c(".PQP")),
+      # Library File Input
+      splitLayout(cellWidths = c("80%", "20%"),
+                  #Select 1 or set of mzML files,
+                  fileInput(inputId = "LibraryFile", "Choose a Library File", multiple = FALSE, accept = c(".pqp")),
+                  ## Reset
+                  actionButton(inputId = "resetLibraryFile", label = 'X')
+      ),
+      tags$style(type='text/css', "#LibraryFile { width:100%; margin-top: 25px;}"),
+      tags$style(type='text/css', "#resetLibraryFile { width:100%; margin-top: 25px;}"),
+
+      # OSW File Input
+      splitLayout(cellWidths = c("80%", "20%"),
+                  #Select 1 or set of mzML files,
+                  fileInput(inputId = "OSWFile", "Choose a OSW File", multiple = FALSE, accept = c(".osw")),
+                  ## Reset
+                  actionButton(inputId = "resetOSWFile", label = 'X')
+      ),
+      tags$style(type='text/css', "#OSWFile { width:100%; margin-top: 25px;}"),
+      tags$style(type='text/css', "#resetOSWFile { width:100%; margin-top: 25px;}"),
       
       #Path to directory where mzml folder and osw folder are located. By default is set to the working directory.
       textInput(inputId = "WorkingDirectory", "Set Working Directory (Location of mzML and osw folders)", 
                 value = paste((gsub('............$', '', getwd())), 'extdata', sep = '')),
       
       #Full peptide name including modifications
-      textInput(inputId = "Mod", "Peptide Name", value = "ANS(UniMod:21)SPTTNIDHLK(UniMod:259)"),
-      
+      selectizeInput('Mod', 'Peptide Name', choices = '', options = list(
+        valueField = 'Unique Peptide string',
+        labelField = 'name',
+        searchField = 'name',
+        options = list( ),
+        create = FALSE, 
+        multiple = FALSE,
+        selected = NULL
+        
+      )),
+       
       #Charge of desired peptide (Specific charge must be in data set)
-      numericInput(inputId = "Charge", "Peptide Charge", value = 2, min = 1, step = 1),
+      selectizeInput('Charge', 'Peptide Charge', choices = '', options = list(
+        valueField = 'Unique Charge',
+        labelField = 'name',
+        searchField = 'name',
+        options = list( ),
+        create = FALSE, 
+        multiple = FALSE,
+        selected = NULL
+        
+      )),
       
       #Number of plots to display
       sliderInput("n", "Number of Plots", value=2, min=1, max=10),
@@ -121,6 +145,7 @@ ui <- fluidPage(
       
       #Name of the reference run if performing multiple pairwise alignments. Not required.
       textInput(inputId = "Reference", "Select Reference Run for Alignment", value = "chludwig_K150309_013_SW_0"),
+      
     ),
     
     mainPanel(
@@ -129,11 +154,58 @@ ui <- fluidPage(
   )
 )
 
-server <- function(input, output) {
+server <- function(input, output, session) {
   
   ## Clear Chromatogram File input
   observeEvent( input$resetChromatogramFile, {
-    reset('ChromatogramFile')
+    shinyjs::reset('ChromatogramFile')
+  } )
+  
+  ## Clear Library File input
+  observeEvent( input$resetLibraryFile, {
+    shinyjs::reset('LibraryFile')
+  } )
+  
+  ## Clear OSW File input
+  observeEvent( input$resetOSWFile, {
+    shinyjs::reset('OSWFile')
+  } )
+  
+  ## reactive values object to store some re-usable stuff
+  values <- reactiveValues()
+
+  observeEvent( input$LibraryFile, {
+    ## Load Librady file into data frame
+    lib_df <- mstools::getPepLibData_( input$LibraryFile$datapath ) 
+    ## Store library data.frame into a re-usable  object
+    values$lib_df <- lib_df
+    ## Get list of unique modified peptides
+    uni_peptide_list <- as.list(unique( lib_df$MODIFIED_SEQUENCE )) 
+    ## Update slection list with unique peptides
+    updateSelectizeInput( session, inputId = 'Mod', choices = uni_peptide_list  )
+  } )
+ 
+  ## Load OSW file
+  observeEvent( input$OSWFile, {
+    ## Load OSW file
+    osw_df <- mstools::getOSWData_( oswfile=input$OSWFile, decoy_filter = TRUE, ms2_score = TRUE, ipf_score = TRUE )
+    print(dim(osw_df))
+    print(unique(osw_df$run_id))
+  })
+  
+  ## Observe Peptide Selection
+  observeEvent( input$Mod, {
+    ## Check if there is no lib df returned from intial library load
+    if ( !is.null( values$lib_df ) ){
+      ## get unique charge state for current peptide selection
+     values$lib_df %>%
+      dplyr::filter( MODIFIED_SEQUENCE==input$Mod ) %>%
+      dplyr::select( PRECURSOR_CHARGE ) %>%
+      unique() %>%
+      as.list() -> unique_charges
+    ## Update charge selection to charges available for currently selected peptide sequence.  
+    updateSelectizeInput( session, inputId = 'Charge', choices = unique_charges )
+    }
   } )
   
   #Generate set of variable plots
@@ -202,7 +274,7 @@ server <- function(input, output) {
             runs <- c(input$Reference, gsub('...........$', '', input$ChromatogramFile[my_i, 'name']))
             print(runs)
             AlignObjOutput <- getAlignObjs(analytes, runs, dataPath)
-            k <- plotAlignedAnalytes(AlignObjOutput, DrawAlignR = F, annotatePeak = T)
+            k <- plotAlignedAnalytes(AlignObjOutput, DrawAlignR = T, annotatePeak = T)
             plotly::ggplotly(k$prefU, dynamicTicks = TRUE)
             tictoc::toc()
           }
