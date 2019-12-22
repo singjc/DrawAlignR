@@ -69,6 +69,18 @@ options(shiny.maxRequestSize=10000*1024^2)
 ### https://stackoverflow.com/questions/47933524/how-do-i-synchronize-the-zoom-level-of-multiple-charts-with-plotly-js
 
 
+withConsoleRedirect <- function(containerId, expr) {
+  # Change type="output" to type="message" to catch stderr
+  # (messages, warnings, and errors) instead of stdout.
+  txt <- capture.output(results <- expr, type = "output")
+  if (length(txt) > 0) {
+    insertUI(paste0("#", containerId), where = "beforeEnd",
+             ui = paste0(txt, "\n", collapse = "")
+    )
+  }
+  results
+}
+
 ui <- fluidPage(
   
   useShinyjs(),  # Include shinyjs
@@ -146,6 +158,8 @@ ui <- fluidPage(
       #Name of the reference run if performing multiple pairwise alignments. Not required.
       textInput(inputId = "Reference", "Select Reference Run for Alignment", value = "chludwig_K150309_013_SW_0"),
       
+      pre( id = "console" )
+      
     ),
     
     mainPanel(
@@ -155,6 +169,8 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session) {
+  
+  withConsoleRedirect( "console", {
   
   ## Clear Chromatogram File input
   observeEvent( input$resetChromatogramFile, {
@@ -294,6 +310,7 @@ server <- function(input, output, session) {
       })
     })
   }
+  }) # End console redirect
 }
 
 
