@@ -2,3 +2,9 @@
 .Rhistory
 .RData
 .Ruserdata
+
+# ignore specific extdata
+inst/extdata/mzml/
+inst/extdata/sqmass/
+inst/extdata/osw/
+inst/extdata/PQP Library/
