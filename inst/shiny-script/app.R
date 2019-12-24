@@ -177,6 +177,19 @@ server <- function(input, output, session) {
   observeEvent( input$resetChromatogramFile, {
     shinyjs::reset('ChromatogramFile')
     
+  } )
+  
+  ## Clear Library File input
+  observeEvent( input$resetLibraryFile, {
+    shinyjs::reset('LibraryFile')
+  } )
+  
+  ## Clear OSW File input
+  observeEvent( input$resetOSWFile, {
+    shinyjs::reset('OSWFile')
+  } )
+  
+  observeEvent( input$ChromatogramFile, {
     ##*******************************
     ## Pre-Load mzML Files
     ##*******************************
@@ -206,20 +219,7 @@ server <- function(input, output, session) {
     tictoc::toc()
     
     values$masterMzExperiment <- masterMzExperiment
-    
-  } )
-  
-  ## Clear Library File input
-  observeEvent( input$resetLibraryFile, {
-    shinyjs::reset('LibraryFile')
-  } )
-  
-  ## Clear OSW File input
-  observeEvent( input$resetOSWFile, {
-    shinyjs::reset('OSWFile')
-  } )
-  
-  
+  })
 
   observeEvent( input$LibraryFile, {
     ## Load Librady file into data frame
@@ -236,8 +236,6 @@ server <- function(input, output, session) {
   observeEvent( input$OSWFile, {
     ## Load OSW file
     osw_df <- mstools::getOSWData_( oswfile=input$OSWFile, decoy_filter = TRUE, ms2_score = TRUE, ipf_score = TRUE )
-    print(dim(osw_df))
-    print(unique(osw_df$run_id))
   })
   
   ## Observe Peptide Selection
@@ -370,7 +368,6 @@ server <- function(input, output, session) {
             analytes <- paste(input$Mod, "_", toString(input$Charge), sep="")
             runs <- c(input$Reference, gsub('...........$', '', input$ChromatogramFile[my_i, 'name']))
             masterMzExperiment <- values$masterMzExperiment
-            print( str(values) )
             AlignObjOutput <- DIAlignR::getAlignObjs(analytes = analytes, runs = runs, dataPath = dataPath, masterMzExperiment=masterMzExperiment)
             tictoc::toc()
             k <- plotAlignedAnalytes(AlignObjOutput, DrawAlignR = T, annotatePeak = T)
