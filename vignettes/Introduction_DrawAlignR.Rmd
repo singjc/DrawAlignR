@@ -96,10 +96,10 @@ Looking at a single or a few particular transitions:
 
 ```{r}
           chrom_input <- "../inst/extdata/mzml/chludwig_K150309_013_SW_0.chrom.mzML"
-          lib_input <- "../inst/extdata/PQP library/psgs.pqp"
+          lib_input <- "../inst/extdata/pqp/psgs_phospho_optimized_decoys.pqp"
           peptide <- "ANS(UniMod:21)SPTTNIDHLK(UniMod:259)"
-          lib <- getPepLibData_(lib_input, peptide_id = '')
-          g.out <- getXIC(graphic_obj = ggplot(), chromatogram_file = chrom_input,
+          lib <- mstools::getPepLibData_(lib_input, peptide_id = '')
+          g.out <- mstools::getXIC(graphic_obj = ggplot(), chromatogram_file = chrom_input,
                           df_lib = lib, mod = peptide, Isoform_Target_Charge = 2)
           plotly::ggplotly(g.out$graphic_obj, dynamicTicks = TRUE)
 
