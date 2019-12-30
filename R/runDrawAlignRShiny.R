@@ -31,9 +31,6 @@
 #' @source "plot_chrom_reference.R"
 #' 
 #' @export
-
-library(shiny)
-
 runDrawAlignR <- function() {
   #appDir <- system.file("shiny-script",
   #                     package = "DrawAlignR")

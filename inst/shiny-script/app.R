@@ -5,26 +5,26 @@
 #' @import shiny
 #' @import shinyjs
 #' @import shinyFiles 
-#' @import ggplot2
 #' @import data.table
 #' @import plyr
+#' @import dplyr
+#' @import dbplyr
+#' @import tidyr
 #' @import tibble
 #' @import ggplot2
 #' @import gridExtra
 #' @import ggrepel
+#' @import latticeExtra
+#' @import plotly
 #' @import signal
 #' @import tidyverse
 #' @import crayon
 #' @import pbmcapply
-#' @import plotly
-#' @import mstools
 #' @import zoo
-#' @import dbplyr
-#' @import tidyr
 #' @import mzR
 #' @import Rcpp
 #' @import DIAlignR
-#' @import latticeExtra
+#' @import mstools
 #'
 #' @source "GetXIC.r"
 #' @source "getPepLibData.R"
@@ -76,7 +76,7 @@ ui <- fluidPage(
   
   useShinyjs(),  # Include shinyjs
   
-  titlePanel( title=div( img(src="DIAlignR-logo.jpg", width = 150, height = 150 ), div("DrawAlignR") ) ),
+titlePanel( title=div( img(src="DIAlignR-logo.jpg", width = 150, height = 150 ), div( HTML(sprintf("DrawAlignR <h6> Ver: %s</h6>", packageVersion("DrawAlignR"))) ) ) ),
   sidebarLayout(
     
     sidebarPanel(
@@ -481,39 +481,39 @@ server <- function(input, output, session) {
           if ( F ){
             my_i <- 2
             values <- list()
-            dataPath <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata"
+            dataPath <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/"
             analytes <- "ANSS(UniMod:21)PTTNIDHLK(UniMod:259)_2"
             input <- list()
-            input$WorkingDirectory <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata"
+            input$WorkingDirectory <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/"
             input$Mod <- "ANSS(UniMod:21)PTTNIDHLK(UniMod:259)"
             input$Charge <- 2
             # input$ChromatogramFile$datapath <- '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/mzml/chludwig_K150309_013_SW_0.chrom.mzML' 
             input$ChromatogramFile <- data.frame(name=c("chludwig_K150309_013_SW_0.chrom.mzML", "chludwig_K150309_004b_SW_1_16.chrom.mzML"),
-                                                 datapath=c('/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/mzml/chludwig_K150309_013_SW_0.chrom.mzML' ,
-                                                            '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/mzml/chludwig_K150309_004b_SW_1_16.chrom.mzML'),
+                                                 datapath=c('/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/mzml/chludwig_K150309_013_SW_0.chrom.mzML' ,
+                                                            '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/mzml/chludwig_K150309_004b_SW_1_16.chrom.mzML'),
                                                  stringsAsFactors=F)
             input$Reference <- "chludwig_K150309_013_SW_0"
             input$Experiment <- "chludwig_K150309_004b_SW_1_16"
-            input$LibraryFile$datapath <- '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/pqp/psgs_phospho_optimized_decoys.pqp'
-            input$OSWFile$datapath <- '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/osw/merged.merged.osw'     
+            input$LibraryFile$datapath <- '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/pqp/psgs_phospho_optimized_decoys.pqp'
+            input$OSWFile$datapath <- '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/osw/merged.merged.osw'     
             
             ## Spyogenes
             values <- list()
-            dataPAth <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/Spyogenes_Filt"
+            dataPAth <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/"
             analytes <- "QFNNTDIVLLEDFQK_3"
             input <- list()
-            input$WorkingDirectory <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/Spyogenes_Filt"
+            input$WorkingDirectory <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/"
             input$Mod <- "QFNNTDIVLLEDFQK"
             input$Charge <- 3
             # input$ChromatogramFile$datapath <- '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/mzml/chludwig_K150309_013_SW_0.chrom.mzML' 
             input$ChromatogramFile <- data.frame(name=c("hroest_K120808_Strep10%PlasmaBiolRepl1_R03_SW_filt.chrom.mzML", "hroest_K120809_Strep10%PlasmaBiolRepl2_R04_SW_filt.chrom.mzML"),
-                                                 datapath=c('/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/Spyogenes_Filt/mzml/hroest_K120808_Strep10%PlasmaBiolRepl1_R03_SW_filt.chrom.mzML' ,
-                                                            '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/Spyogenes_Filt/mzml/hroest_K120809_Strep10%PlasmaBiolRepl2_R04_SW_filt.chrom.mzML'),
+                                                 datapath=c('/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/mzml/hroest_K120808_Strep10%PlasmaBiolRepl1_R03_SW_filt.chrom.mzML' ,
+                                                            '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/mzml/hroest_K120809_Strep10%PlasmaBiolRepl2_R04_SW_filt.chrom.mzML'),
                                                  stringsAsFactors=F)
             input$Reference <- "hroest_K120808_Strep10%PlasmaBiolRepl1_R03_SW_filt"
             input$Experiment <- "hroest_K120809_Strep10%PlasmaBiolRepl2_R04_SW_filt"
             input$LibraryFile$datapath <- NULL
-            input$OSWFile$datapath <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/Spyogenes_Filt/osw/merged.osw"
+            input$OSWFile$datapath <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/osw/merged.osw"
             
             
           }
