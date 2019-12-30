@@ -50,6 +50,7 @@ The list of peptides is extracted from either the input library file if abailabl
 
 Choose which charge state to visualize for the selcted peptide.
 ![](../inst/extdata/tutorial_figures/Tutorial_Fig_5.png)
+
 ## Select Reference Run and Experiment Run
 
 Choose which chromatogram file to use as the reference run, and which chromatogram file to use as the experiment run. These are set through the searchable dropdown lists, which extracts the filenames from the supplied chromatogram files without the .chrom.mzml extension
@@ -59,14 +60,16 @@ Choose which chromatogram file to use as the reference run, and which chromatogr
 
 Check the Plot Aligned checkbox to perform the alignment of the two runs for the seleected peptide
 You can also use the 
-\item Reference Plot
-\item Experiment Plot
-\item Experiment Aligned Plot
+
+* Reference Plot
+* Experiment Plot
+* Experiment Aligned Plot
+
 to plot the different output extracted ion chromatogram results
 ![](../inst/extdata/tutorial_figures/Tutorial_Fig_11.png)
 ![](../inst/extdata/tutorial_figures/Tutorial_Fig_12.png)
 
-The chromatogram plots are interactive, in that you can hover over the data points to see the *retention time*, *intentisty* and specific *transition* values.
+The chromatogram plots are interactive, in that you can hover over the data points to see the **retention time**, **intentisty** and specific **transition** values.
 ![](../inst/extdata/tutorial_figures/Tutorial_Fig_13.png)
 
 You can also zoon in to specific regions of the chromatogram for a closer inspection.
