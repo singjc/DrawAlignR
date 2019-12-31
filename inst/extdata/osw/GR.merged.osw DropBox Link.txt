@@ -1,8 +1,0 @@
-
-____________________________________________________________
-https://www.dropbox.com/s/s9akuq14eks3os4/GR.merged.osw?dl=0
-____________________________________________________________
-
-**File exceeds GitHub/GitLFS limit of 2 gb, hosted on DropBox instead**
-
-Save file into osw folder, ensure name is ending in *.merged.osw, i.e (GR.merged.osw)

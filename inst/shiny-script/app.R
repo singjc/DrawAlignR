@@ -3,26 +3,28 @@
 #' @return None. Calling this script creates the Shiny webapp
 #'
 #' @import shiny
-#' @import ggplot2
+#' @import shinyjs
+#' @import shinyFiles 
 #' @import data.table
 #' @import plyr
+#' @import dplyr
+#' @import dbplyr
+#' @import tidyr
 #' @import tibble
 #' @import ggplot2
 #' @import gridExtra
 #' @import ggrepel
+#' @import latticeExtra
+#' @import plotly
 #' @import signal
 #' @import tidyverse
 #' @import crayon
 #' @import pbmcapply
-#' @import plotly
-#' @import mstools
 #' @import zoo
-#' @import dbplyr
-#' @import tidyr
 #' @import mzR
 #' @import Rcpp
 #' @import DIAlignR
-#' @import latticeExtra
+#' @import mstools
 #'
 #' @source "GetXIC.r"
 #' @source "getPepLibData.R"
@@ -33,6 +35,7 @@
 library(plotly)
 library(shiny)
 library(shinyjs)
+library(shinyFiles)
 library(ggplot2)
 library(data.table)
 library(plyr)
@@ -54,7 +57,7 @@ library(DIAlignR)
 library(latticeExtra)
 
 #Setting max file size
-options(shiny.maxRequestSize=10000*1024^2)
+options(shiny.maxRequestSize=1000000*1024^2)
 
 ## This should be done only if the user does not have the package, otherwise it will install everytime the app is run, and will be very slow for installing large packages.
 # if (!requireNamespace("BiocManager", quietly = TRUE))
@@ -85,8 +88,7 @@ ui <- fluidPage(
   
   useShinyjs(),  # Include shinyjs
   
-  titlePanel("DrawAlignR"),
-  
+titlePanel( title=div( img(src="DIAlignR-logo.jpg", width = 150, height = 150 ), div( HTML(sprintf("DrawAlignR <h6> Ver: %s</h6>", packageVersion("DrawAlignR"))) ) ) ),
   sidebarLayout(
     
     sidebarPanel(
@@ -94,7 +96,7 @@ ui <- fluidPage(
       # Chromatogram Input
       splitLayout(cellWidths = c("80%", "20%"),
                   #Select 1 or set of mzML files,
-                  fileInput(inputId = "ChromatogramFile", "Choose a Chromatogram File", multiple = TRUE, accept = c(".mzML", ".sqMass")),
+                  fileInput(inputId = "ChromatogramFile", "Choose a Chromatogram File(s)", multiple = TRUE, accept = c(".mzML", ".sqMass"), buttonLabel = icon("folder")  ),
                   ## Reset
                   actionButton(inputId = "resetChromatogramFile", label = 'X')
       ),
@@ -104,26 +106,33 @@ ui <- fluidPage(
       # Library File Input
       splitLayout(cellWidths = c("80%", "20%"),
                   #Select 1 or set of mzML files,
-                  fileInput(inputId = "LibraryFile", "Choose a Library File", multiple = FALSE, accept = c(".pqp")),
+                  fileInput(inputId = "LibraryFile", "Choose a Library File", multiple = FALSE, accept = c(".pqp"), buttonLabel = icon("folder") ),
                   ## Reset
                   actionButton(inputId = "resetLibraryFile", label = 'X')
       ),
       tags$style(type='text/css', "#LibraryFile { width:100%; margin-top: 25px;}"),
       tags$style(type='text/css', "#resetLibraryFile { width:100%; margin-top: 25px;}"),
-
+      
       # OSW File Input
       splitLayout(cellWidths = c("80%", "20%"),
                   #Select 1 or set of mzML files,
-                  fileInput(inputId = "OSWFile", "Choose a OSW File", multiple = FALSE, accept = c(".osw")),
+                  fileInput(inputId = "OSWFile", "Choose a OSW File", multiple = FALSE, accept = c(".osw"), buttonLabel = icon("folder") ),
                   ## Reset
                   actionButton(inputId = "resetOSWFile", label = 'X')
       ),
       tags$style(type='text/css', "#OSWFile { width:100%; margin-top: 25px;}"),
       tags$style(type='text/css', "#resetOSWFile { width:100%; margin-top: 25px;}"),
       
-      #Path to directory where mzml folder and osw folder are located. By default is set to the working directory.
-      textInput(inputId = "WorkingDirectory", "Set Working Directory (Location of mzML and osw folders)", 
-                value = paste((gsub('............$', '', getwd())), 'extdata', sep = '')),
+      # Path to directory where mzml folder and osw folder are located. By default is set to the working directory.
+      splitLayout(cellWidths = c("17%", "83%"),
+                  ## GUI directroy selector
+                  shinyFiles::shinyDirButton( id = "interactiveWorkingDirectory", label = "",  title = "Set Working Directory (Location of mzML and osw folders)", icon = icon("folder") ),
+                  ## Text box for user to manually input working data path
+                  textInput(inputId = "WorkingDirectory", "Set Working Directory (Location of mzML and osw folders)",
+                            value = paste((gsub('............$', '', getwd())), 'extdata', sep = ''))
+      ),
+      tags$style(type='text/css', "#interactiveWorkingDirectory { width:100%; margin-top: 50px;}"),
+      tags$style(type='text/css', "#WorkingDirectory { width:100%; margin-top: 25px;}"),
       
       #Full peptide name including modifications
       selectizeInput('Mod', 'Peptide Name', choices = '', options = list(
@@ -136,7 +145,7 @@ ui <- fluidPage(
         selected = NULL
         
       )),
-       
+      
       #Charge of desired peptide (Specific charge must be in data set)
       selectizeInput('Charge', 'Peptide Charge', choices = '', options = list(
         valueField = 'Unique Charge',
@@ -150,31 +159,73 @@ ui <- fluidPage(
       )),
       
       #Number of plots to display
-      sliderInput("n", "Number of Plots", value=2, min=1, max=10),
+      sliderInput("n", "Number of Plots", value=1, min=1, max=10),
       
       #Off by default. Enabled if DIAlignR should be run and aligned chromatograms should be plotted.
       checkboxInput(inputId = "Align", "Plot Aligned", value = FALSE, width = NULL),
       
       #Name of the reference run if performing multiple pairwise alignments. Not required.
-      textInput(inputId = "Reference", "Select Reference Run for Alignment", value = "chludwig_K150309_013_SW_0"),
+      # textInput(inputId = "Reference", "Select Reference Run for Alignment", value = "chludwig_K150309_013_SW_0"),
+      selectizeInput('Reference', 'Select Reference Run for Alignment', choices = '', options = list(
+        valueField = 'Run Name',
+        labelField = 'name',
+        searchField = 'name',
+        options = list( ),
+        create = FALSE, 
+        multiple = FALSE,
+        selected = NULL
+      )),
+      
+      #Charge of desired peptide (Specific charge must be in data set)
+      selectizeInput('Experiment', 'Experiment to Align', choices = '', options = list(
+        valueField = 'Run Name',
+        labelField = 'name',
+        searchField = 'name',
+        options = list( ),
+        create = FALSE, 
+        multiple = FALSE,
+        selected = NULL
+        
+      )),
+      
+      #Plots to show
+      checkboxInput("ref", "Reference Plot", value = T),
+      checkboxInput("exp", "Experiment Plot", value = F),
+      checkboxInput("expAligned", "Experiment Aligned Plot", value = F),
+      
       
       pre( id = "console" )
       
     ),
     
+    
     mainPanel(
-      uiOutput("plots")
+      uiOutput("plots"),
+      
+      absolutePanel( id='log-pannel', draggable = TRUE,
+                     ## Log
+                     fluidRow(
+                       
+                       # log output
+                       textOutput( 'log' )
+                     )
+      ),
+      
     )
+    
+    
   )
 )
 
 server <- function(input, output, session) {
   
-  withConsoleRedirect( "console", {
+  ## reactive values object to store some re-usable stuff
+  values <- reactiveValues()
   
   ## Clear Chromatogram File input
   observeEvent( input$resetChromatogramFile, {
     shinyjs::reset('ChromatogramFile')
+    
   } )
   
   ## Clear Library File input
@@ -187,26 +238,134 @@ server <- function(input, output, session) {
     shinyjs::reset('OSWFile')
   } )
   
-  ## reactive values object to store some re-usable stuff
-  values <- reactiveValues()
-
-  observeEvent( input$LibraryFile, {
-    ## Load Librady file into data frame
-    lib_df <- mstools::getPepLibData_( input$LibraryFile$datapath ) 
-    ## Store library data.frame into a re-usable  object
-    values$lib_df <- lib_df
-    ## Get list of unique modified peptides
-    uni_peptide_list <- as.list(unique( lib_df$MODIFIED_SEQUENCE )) 
-    ## Update slection list with unique peptides
-    updateSelectizeInput( session, inputId = 'Mod', choices = uni_peptide_list  )
+  ## Observe input chromatogramfile  
+  observeEvent( input$ChromatogramFile, {
+    ## Get File Extension Type
+    fileType <- gsub( '.*\\.', '', input$ChromatogramFile$name)
+    print(input$ChromatogramFile$name)
+    print(fileType)
+    if ( fileType=='mzML' | fileType=='mzML.gz'){
+      ##*******************************
+      ## Pre-Load mzML Files
+      ##*******************************
+      
+      ## Get filenames from osw files and check if names are consistent between osw and mzML files. ######
+      filenames <- DIAlignR::getRunNames( input$WorkingDirectory, oswMerged=TRUE)
+      runs <- c(input$Reference, gsub('...........$', '', input$ChromatogramFile[,'name']))
+      filenames <- filenames[filenames$runs %in% runs,]
+      tictoc::tic('Pre-Loading mzML Chromatogram Files onto disk')
+      masterMzExperiment <- list()
+      for ( chromatogram_input_index_num in seq(1, length(filenames$runs)) ){
+        run <- rownames(filenames)[ chromatogram_input_index_num ]
+        message(sprintf("Cacheing mzML for %s of %s runs", run, length(filenames$runs)))
+        ## Get path for current chromatogram file
+        chromatogram_file_i <- input$ChromatogramFile$datapath[[chromatogram_input_index_num]]
+        # Create an mzR object that stores all header information, and use ProteoWizard api to access data from MzML file
+        mz <- mzR::openMSfile(chromatogram_file_i, backend = "pwiz", verbose = T)
+        ## Get table of chromatogram incidces and respective transtion ids
+        chromHead <- mzR::chromatogramHeader(mz)
+        ## Store run id and mz object into master list
+        masterMzExperiment[[run]]$run <- run
+        mzExperiment <- list()
+        mzExperiment$mz <- mz
+        mzExperiment$chromHead <- chromHead
+        masterMzExperiment[[run]]$mzExperiment <- mzExperiment
+      }
+      tictoc::toc()
+      
+      ## Store masterMzExperiment container
+      values$masterMzExperiment <- masterMzExperiment
+      ## Store chromatogram file run names
+      values$chromnames <- gsub("\\.chrom\\.mzML$|\\.chrom\\.sqMass$", "", input$ChromatogramFile$name)
+      ## Update Reference list
+      updateSelectizeInput( session, inputId = "Reference", choices = as.list(values$chromnames))
+      ## Update Experiment list with reverse order
+      updateSelectizeInput( session, inputId = "Experiment", choices = as.list(rev(values$chromnames)))
+    }
+  })
+  
+  ## Working Directory
+  shinyDirChoose(input, 'interactiveWorkingDirectory', roots = c( `Working Directory` =  "../", home = "~", root = "/" ), defaultRoot = 'Working Directory', defaultPath = '/' )
+  ### Create a reactive object to store working directory
+  dir <- reactive(input$interactiveWorkingDirectory)
+  
+  global <- reactiveValues(datapath = getwd())
+  
+  values$WorkingDirectory <- renderText({  
+    global$datapath
+  })  
+  ## Observe interactive set working directory button
+  observeEvent( input$interactiveWorkingDirectory, {
+    if ( class(dir())[1]=='list' ){
+      ## Get root directory based on used choice, working directory, home or root
+      if ( dir()$root=='Working Directory' ){
+        root_node <- dirname(getwd())
+      } else if ( dir()$root == 'home' ) {
+        root_node <- "~"
+      } else {
+        root_node <- .Platform$file.sep
+      }
+      ## Get full working directroy of user selected directory
+      global$datapath <- paste( root_node, file.path( paste( unlist(dir()$path[-1]), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep )
+      ## Update Working Directory Text Box
+      updateTextInput( session = session, inputId = 'WorkingDirectory', value = global$datapath  )
+    }
+  })
+  
+  observeEvent( {
+    input$LibraryFile
+    input$OSWFile
+    input$WorkingDirectory
+    input$interactiveWorkingDirectory
+  }
+  , {
+    ## If Library File is supplied, file modification list with peptide values
+    if( !is.null(input$LibraryFile) ) {
+      ## Load Librady file into data frame
+      lib_df <- mstools::getPepLibData_( input$LibraryFile$datapath ) 
+      ## Store library data.frame into a re-usable  object
+      values$lib_df <- lib_df
+      ## Get list of unique modified peptides
+      uni_peptide_list <- as.list(unique( lib_df$MODIFIED_SEQUENCE )) 
+      ## Update slection list with unique peptides
+      updateSelectizeInput( session, inputId = 'Mod', choices = uni_peptide_list  )
+    } else {
+      # If an explicit path to an oswfile is supplied
+      if( !is.null(input$OSWFile) ){
+        osw_df <- mstools::getOSWData_( input$OSWFile$datapath, decoy_filter = TRUE, ms2_score = TRUE, ipf_score = FALSE ) 
+        values$osw_df <- osw_df
+        ## Get list of unique modified peptides
+        uni_peptide_list <- as.list(unique( osw_df$FullPeptideName ) )
+        ## Update selection list with unique peptides
+        updateSelectizeInput( session, inputId = 'Mod', choices = uni_peptide_list  )
+      }  else if ( !is.null(input$WorkingDirectory) ) {
+        items_in_wd <- list.files( input$WorkingDirectory )
+        if( "osw" %in% items_in_wd ){
+          files_in_osw_dir <- list.files( paste(input$WorkingDirectory,'osw/',sep='/'), pattern = "*osw$" ,full.names = T )
+          if ( length(files_in_osw_dir) > 1 ){
+            warning( sprintf("There were %s osw files found, taking first file!!")) # TODO: If user uses non merged osw file?
+            files_in_osw_dir <- files_in_osw_dir[1]
+          }
+          osw_df <- mstools::getOSWData_( files_in_osw_dir, decoy_filter = TRUE, ms2_score = TRUE, ipf_score = FALSE )
+          values$osw_df <- osw_df
+          uni_peptide_list <- as.list( unique( osw_df$FullPeptideName ) )
+          ## Update slection list with unique peptides
+          updateSelectizeInput( session, inputId = 'Mod', choices = uni_peptide_list  )
+        }
+      } else {
+        warning("There was no library file, osw file or working directory supplied!.")
+      }
+      
+    }
+    
+    
   } )
- 
+  
   ## Load OSW file
   observeEvent( input$OSWFile, {
     ## Load OSW file
-    osw_df <- mstools::getOSWData_( oswfile=input$OSWFile, decoy_filter = TRUE, ms2_score = TRUE, ipf_score = TRUE )
-    print(dim(osw_df))
-    print(unique(osw_df$run_id))
+    osw_df <- mstools::getOSWData_( oswfile=input$OSWFile$datapath, decoy_filter = TRUE, ms2_score = TRUE, ipf_score =  FALSE)
+    values$osw_df <- osw_df
   })
   
   ## Observe Peptide Selection
@@ -214,15 +373,27 @@ server <- function(input, output, session) {
     ## Check if there is no lib df returned from intial library load
     if ( !is.null( values$lib_df ) ){
       ## get unique charge state for current peptide selection
-     values$lib_df %>%
-      dplyr::filter( MODIFIED_SEQUENCE==input$Mod ) %>%
-      dplyr::select( PRECURSOR_CHARGE ) %>%
-      unique() %>%
-      as.list() -> unique_charges
-    ## Update charge selection to charges available for currently selected peptide sequence.  
-    updateSelectizeInput( session, inputId = 'Charge', choices = unique_charges )
+      values$lib_df %>%
+        dplyr::filter( MODIFIED_SEQUENCE==input$Mod ) %>%
+        dplyr::select( PRECURSOR_CHARGE ) %>%
+        unique() %>%
+        as.list() -> unique_charges
+      names(unique_charges) <- unique_charges
+      ## Update charge selection to charges available for currently selected peptide sequence.  
+      updateSelectizeInput( session, inputId = 'Charge', choices = unique_charges )
+    } else if ( !is.null(values$osw_df) ) {
+      values$osw_df %>%
+        dplyr::filter( FullPeptideName==input$Mod ) %>%
+        dplyr::select( Charge ) %>%
+        unique() %>%
+        as.list() -> unique_charges
+      names(unique_charges) <- unique_charges
+      ## Update charge selection to charges available for currently selected peptide sequence.  
+      updateSelectizeInput( session, inputId = 'Charge', choices = unique_charges )
     }
+    
   } )
+  
   
   #Generate set of variable plots
   
@@ -232,86 +403,223 @@ server <- function(input, output, session) {
       plotlyOutput(plotname)
     })
     do.call(tagList, plot_output_list)
+    
   })
   
-  #Generate all plots. Max plots set to 10
-  
-  for (i in 1:10) {
-    local({
-      my_i <- i
-      plotname <- paste("plot", my_i, sep="")
-      
-      
-      
-      output[[plotname]] <- renderPlotly({
+  observeEvent( 
+    {
+      input$Mod
+      input$Align 
+    }, {
+      if ( !(input$Align) ){
+        cat("Alignment option was not selected\n")
+        #Generate all plots. Max plots set to 10
         
-        
-        #If alignment is disabled, generate standard chromatogram plot.
-        
-        if (is.null(input$ChromatogramFile)){
-          stop()
-        }
-        else if (is.null(input$LibraryFile)){
-          stop()
-        }
-        else if (is.null(input$Mod)){
-          stop()
-        }
-        
-        if (!(input$Align)){
-          chrom_input <- input$ChromatogramFile[[my_i, 'datapath']]
-          lib_input <- input$LibraryFile
-          peptide <- input$Mod
-          lib <- getPepLibData_(lib_input$datapath, peptide_id = '')
-          g.out <- getXIC(graphic_obj = ggplot(), chromatogram_file = chrom_input,
-                          df_lib = lib, mod = peptide, Isoform_Target_Charge = input$Charge)
-          plotly::ggplotly(g.out$graphic_obj, dynamicTicks = TRUE)
-        }
-        
-        #If alignment is enabled.
-        
-        else {
-          
-          #Ensuring at least two runs selected, not conducting alignment against same run
-          
-          if (!(input$Reference == gsub('...........$', '', input$ChromatogramFile[[my_i, 'name']]))){
+        for (i in 1:10) {
+          local({
+            my_i <- i
+            plotname <- paste("plot", my_i, sep="")
             
-            if ( F ){
-              my_i <- 1
-              dataPath <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata"
-              analytes <- "ANSS(UniMod:21)PTTNIDHLK(UniMod:259)_2"
-              input <- list()
-              input$ChromatogramFile <- data.frame(name=c("chludwig_K150309_012_SW_1_1.chrom.mzML", "chludwig_K150309_013_SW_0_.chrom.mzML", "chludwig_K150309_010_SW_1_2.chrom.mzML"))
-              input$Reference <- "chludwig_K150309_013_SW_0"
+            output[[plotname]] <- renderPlotly({
+              
+              
+              #If alignment is disabled, generate standard chromatogram plot.
+              
+              if (is.null(input$ChromatogramFile)){
+                stop('A Chromgatogram file was not supplied')
+              }
+              # else if (is.null(input$LibraryFile)){
+              #   stop("A Library File was not supplied")
+              # }
+              else if (is.null(input$Mod)){
+                stop("There was no peptide found")
+              }
+              
+              chrom_input <- input$ChromatogramFile$datapath[[my_i]]
+              lib_input <- input$LibraryFile
+              osw_input <- input$OSWFile
+              peptide <- input$Mod
+              modification_labels <- regmatches(peptide, gregexpr("\\(.*?\\)", peptide))[[1]]
+              naked_peptide <-  gsub( paste(gsub('\\)','\\\\)',gsub('\\(','\\\\(',modification_labels)), collapse = '|'), '', peptide )
+              # lib <- getPepLibData_(lib_input$datapath, peptide_id = '')
+              # log <- capture.output(
+              # g.out <- getXIC(graphic_obj = ggplot(), chromatogram_file = chrom_input,
+              # df_lib = lib, mod = peptide, Isoform_Target_Charge = input$Charge)
+              
+              
+              out.plot.h <- mstools::XICMasterPlotFcn_( naked_peptide, 
+                                                        peptide,
+                                                        chrom_input,  lib_input, osw_input, 
+                                                        plotPrecursor=T,
+                                                        plotIntersectingDetecting=T,
+                                                        plotUniqueDetecting=F,
+                                                        plotIdentifying=T,
+                                                        plotIdentifying.Unique=T,
+                                                        plotIdentifying.Shared=F,
+                                                        plotIdentifying.Against=F,
+                                                        doFacetZoom=F,
+                                                        # FacetFcnCall = NULL,
+                                                        doPlot=T,
+                                                        # RT_padding=90000,
+                                                        Charge_State=input$Charge,
+                                                        N_sample = 1,
+                                                        # idx_draw_these = c(8),
+                                                        # store_plots_subdir = paste('/XIC_plots/TP/U', pool, '/', sep=''),
+                                                        # store_plots_subdir = '/Presentation/Figures/IPF_Scoring_With_no_MS 1MS2_precursor_Scoring/6_highest_Concentrations/', 
+                                                        # store_plots_subdir = '/Presentation/Figures/Default_IPF_with_5_pkgrprank_transition_scoring/',
+                                                        # store_plots_subdir = '/Presentation/Figures/IPF_Scoring_With_no_MS1MS2_precursor_Scoring/', 
+                                                        printPlot=T,
+                                                        use_top_trans_pep=F,
+                                                        show_n_transitions=6,
+                                                        show_all_pkgrprnk=F,
+                                                        # show_manual_annotation = manual_annotation_coordinates,
+                                                        show_legend=T,
+                                                        verbosity = 0 )
+              
+              
+              # )
+              # output$log <- renderText( paste(log, collapse = '\n') )
+              plotly::ggplotly(g.out$graphic_obj, dynamicTicks = TRUE)
+              
+            }) # End renderPlotly
+          }) # End local
+        } # End For
+        
+        
+      } else {
+        cat('Alignment Option was selected\n')
+        #Ensuring at least two runs selected, not conducting alignment against same run
+        
+        if (!(input$Reference == gsub('...........$', '', input$Experiment ))){
+          
+          if ( F ){
+            my_i <- 2
+            values <- list()
+            dataPath <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/"
+            analytes <- "ANSS(UniMod:21)PTTNIDHLK(UniMod:259)_2"
+            input <- list()
+            input$WorkingDirectory <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/"
+            input$Mod <- "ANSS(UniMod:21)PTTNIDHLK(UniMod:259)"
+            input$Charge <- 2
+            # input$ChromatogramFile$datapath <- '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/mzml/chludwig_K150309_013_SW_0.chrom.mzML' 
+            input$ChromatogramFile <- data.frame(name=c("chludwig_K150309_013_SW_0.chrom.mzML", "chludwig_K150309_004b_SW_1_16.chrom.mzML"),
+                                                 datapath=c('/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/mzml/chludwig_K150309_013_SW_0.chrom.mzML' ,
+                                                            '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/mzml/chludwig_K150309_004b_SW_1_16.chrom.mzML'),
+                                                 stringsAsFactors=F)
+            input$Reference <- "chludwig_K150309_013_SW_0"
+            input$Experiment <- "chludwig_K150309_004b_SW_1_16"
+            input$LibraryFile$datapath <- '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/pqp/psgs_phospho_optimized_decoys.pqp'
+            input$OSWFile$datapath <- '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/osw/merged.merged.osw'     
+            
+            ## Spyogenes
+            values <- list()
+            dataPAth <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/"
+            analytes <- "QFNNTDIVLLEDFQK_3"
+            input <- list()
+            input$WorkingDirectory <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/"
+            input$Mod <- "QFNNTDIVLLEDFQK"
+            input$Charge <- 3
+            # input$ChromatogramFile$datapath <- '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/mzml/chludwig_K150309_013_SW_0.chrom.mzML' 
+            input$ChromatogramFile <- data.frame(name=c("hroest_K120808_Strep10%PlasmaBiolRepl1_R03_SW_filt.chrom.mzML", "hroest_K120809_Strep10%PlasmaBiolRepl2_R04_SW_filt.chrom.mzML"),
+                                                 datapath=c('/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/mzml/hroest_K120808_Strep10%PlasmaBiolRepl1_R03_SW_filt.chrom.mzML' ,
+                                                            '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/mzml/hroest_K120809_Strep10%PlasmaBiolRepl2_R04_SW_filt.chrom.mzML'),
+                                                 stringsAsFactors=F)
+            input$Reference <- "hroest_K120808_Strep10%PlasmaBiolRepl1_R03_SW_filt"
+            input$Experiment <- "hroest_K120809_Strep10%PlasmaBiolRepl2_R04_SW_filt"
+            input$LibraryFile$datapath <- NULL
+            input$OSWFile$datapath <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/osw/merged.osw"
+            
+            
+          }
+          tryCatch({  
+          tictoc::tic("DIAlignR Elapsed Time")
+          dataPath <- input$WorkingDirectory
+          analytes <- paste(input$Mod, "_", toString(input$Charge), sep="")
+          runs <- c(input$Reference, input$Experiment)
+          cat( sprintf( "Reference: %s\nExperiment: %s\n", input$Reference, input$Experiment))
+          cat( sprintf( "Runs: %s\n", runs ) )
+          masterMzExperiment <- values$masterMzExperiment
+          AlignObjOutput <- DIAlignR::getAlignObjs(analytes = analytes, runs = runs, dataPath = dataPath, refRun = input$Reference, masterMzExperiment=masterMzExperiment)
+          tictoc::toc()
+          
+          ## Generate Plot
+          k <- DIAlignR::plotAlignedAnalytes(AlignObjOutput, DrawAlignR = T, annotatePeak = T)
+          values$plot_i <- 1
+          observeEvent( input$ref, {
+
+            if (input$ref) { 
+              if ( values$plot_i != input$n ){
+                updateSliderInput(session, 'n', value=values$plot_i)
+              }
+              output[[ paste0('plot', values$plot_i) ]] <- renderPlotly({
+                
+                pt1 <- plotly::ggplotly(k$prefU, dynamicTicks = TRUE)
+                
+              }) # End renderPlotly
+              values$plot_i <- values$plot_i + 1
+            } else {
+              pt1 <- NULL
             }
-            tictoc::tic("DIAlignR Elapsed Time:...")
-            dataPath <- input$WorkingDirectory
-            analytes <- paste(input$Mod, "_", toString(input$Charge), sep="")
-            runs <- c(input$Reference, gsub('...........$', '', input$ChromatogramFile[my_i, 'name']))
-            print(runs)
-            AlignObjOutput <- getAlignObjs(analytes, runs, dataPath)
-            k <- plotAlignedAnalytes(AlignObjOutput, DrawAlignR = T, annotatePeak = T)
-            plotly::ggplotly(k$prefU, dynamicTicks = TRUE)
-            tictoc::toc()
-          }
+          })
           
-          #If all possible pairwise alignments conducted, plotting the reference run
+          observeEvent( input$exp, {
+            if (input$exp){
+              if ( values$plot_i != input$n ){
+                updateSliderInput(session, 'n', value=values$plot_i)
+              }
+              output[[ paste0('plot', values$plot_i) ]] <- renderPlotly({
+                
+                pt2 <- plotly::ggplotly(k$peXpU, dynamicTicks = TRUE)
+                
+              }) # End renderPlotly
+              values$plot_i <- values$plot_i + 1
+            } else {
+              pt2 <- NULL
+            }
+          })
           
-          else {
-            chrom_input <- input$ChromatogramFile[[my_i, 'datapath']]
-            lib_input <- input$LibraryFile
-            peptide <- input$Mod
-            lib <- getPepLibData_(lib_input$datapath, peptide_id = '')
-            g.out <- getXIC(graphic_obj = ggplot(), chromatogram_file = chrom_input,
-                            df_lib = lib, mod = peptide, Isoform_Target_Charge = input$Charge)
-            plotly::ggplotly(g.out$graphic_obj, dynamicTicks = TRUE)
-          }
-        }
-      })
-    })
-  }
-  }) # End console redirect
-}
+          observeEvent( input$expAligned, {
+            if (input$expAligned) {
+              if ( values$plot_i != input$n ){
+                updateSliderInput(session, 'n', value=values$plot_i)
+              }
+              output[[ paste0('plot', values$plot_i) ]] <- renderPlotly({
+                
+                pt3 <- plotly::ggplotly(k$peXpA, dynamicTicks = TRUE)
+                
+              }) # End renderPlotly
+              values$plot_i <- values$plot_i + 1
+            } else {
+              pt3 <- NULL
+            }
+          })
+          # # Store plots in a list
+          # ptlist <- list(pt1, pt2, pt3)
+          # # remove the null plots from ptlist and wtlist
+          # to_delete <- !sapply(ptlist,is.null)
+          # ptlist <- ptlist[to_delete] 
+          # 
+          # if (length(ptlist)==0) return(NULL)
+          # 
+        }, error= function(e) {
+          cat("There was some sort of error that occured")
+        })  
+          
+          
+          
+        } # End if !input$Reference != input$Experiment
+        
+        
+      } # End else
+      
+      
+    }) # End Observe Event
+  
+  
+  
+  
+  
+} ## End Server
 
 
 shinyApp(ui = ui, server = server)
