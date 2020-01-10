@@ -88,115 +88,232 @@ ui <- fluidPage(
   
   useShinyjs(),  # Include shinyjs
   
-titlePanel( title=div( img(src="DIAlignR-logo.jpg", width = 150, height = 150 ), div( HTML(sprintf("DrawAlignR <h6> Ver: %s</h6>", packageVersion("DrawAlignR"))) ) ) ),
+titlePanel( title=div( img(src="DIAlignR-logo.jpg", width = 80, height = 80, align="top" ), ( HTML(sprintf("DrawAlignR <h6 style='display:inline'>Ver: %s</h6>", packageVersion("DrawAlignR"))) ) ) ),
   sidebarLayout(
     
     sidebarPanel(
       
-      # Chromatogram Input
-      splitLayout(cellWidths = c("80%", "20%"),
-                  #Select 1 or set of mzML files,
-                  fileInput(inputId = "ChromatogramFile", "Choose a Chromatogram File(s)", multiple = TRUE, accept = c(".mzML", ".sqMass"), buttonLabel = icon("folder")  ),
-                  ## Reset
-                  actionButton(inputId = "resetChromatogramFile", label = 'X')
-      ),
-      tags$style(type='text/css', "#ChromatogramFile { width:100%; margin-top: 25px;}"),
-      tags$style(type='text/css', "#resetChromatogramFile { width:100%; margin-top: 25px;}"),
+      tabsetPanel(
+        tabPanel( title = "General Settings",
+                  
+                  # Chromatogram Input
+                  splitLayout(cellWidths = c("80%", "20%"),
+                              #Select 1 or set of mzML files,
+                              fileInput(inputId = "ChromatogramFile", "Choose a Chromatogram File(s)", multiple = TRUE, accept = c(".mzML", ".sqMass"), buttonLabel = icon("folder")  ),
+                              ## Reset
+                              actionButton(inputId = "resetChromatogramFile", label = 'X')
+                  ),
+                  tags$style(type='text/css', "#ChromatogramFile { width:100%; margin-top: 25px;}"),
+                  tags$style(type='text/css', "#resetChromatogramFile { width:100%; margin-top: 25px;}"),
+                  
+                  # Library File Input
+                  splitLayout(cellWidths = c("80%", "20%"),
+                              #Select 1 or set of mzML files,
+                              fileInput(inputId = "LibraryFile", "Choose a Library File", multiple = FALSE, accept = c(".pqp"), buttonLabel = icon("folder") ),
+                              ## Reset
+                              actionButton(inputId = "resetLibraryFile", label = 'X')
+                  ),
+                  tags$style(type='text/css', "#LibraryFile { width:100%; margin-top: 25px;}"),
+                  tags$style(type='text/css', "#resetLibraryFile { width:100%; margin-top: 25px;}"),
+                  
+                  # OSW File Input
+                  splitLayout(cellWidths = c("80%", "20%"),
+                              #Select 1 or set of mzML files,
+                              fileInput(inputId = "OSWFile", "Choose a OSW File", multiple = FALSE, accept = c(".osw"), buttonLabel = icon("folder") ),
+                              ## Reset
+                              actionButton(inputId = "resetOSWFile", label = 'X')
+                  ),
+                  tags$style(type='text/css', "#OSWFile { width:100%; margin-top: 25px;}"),
+                  tags$style(type='text/css', "#resetOSWFile { width:100%; margin-top: 25px;}"),
+                  
+                  # Path to directory where mzml folder and osw folder are located. By default is set to the working directory.
+                  splitLayout(cellWidths = c("17%", "83%"),
+                              ## GUI directroy selector
+                              shinyFiles::shinyDirButton( id = "interactiveWorkingDirectory", label = "",  title = "Set Working Directory (Location of mzML and osw folders)", icon = icon("folder") ),
+                              ## Text box for user to manually input working data path
+                              textInput(inputId = "WorkingDirectory", "Set Working Directory (Location of mzML and osw folders)",
+                                        value = paste((gsub('............$', '', getwd())), 'extdata', sep = ''))
+                  ),
+                  tags$style(type='text/css', "#interactiveWorkingDirectory { width:100%; margin-top: 50px;}"),
+                  tags$style(type='text/css', "#WorkingDirectory { width:100%; margin-top: 25px;}"),
+                  
+                  #Full peptide name including modifications
+                  selectizeInput('Mod', 'Peptide Name', choices = '', options = list(
+                    valueField = 'Unique Peptide string',
+                    labelField = 'name',
+                    searchField = 'name',
+                    options = list( ),
+                    create = FALSE, 
+                    multiple = FALSE,
+                    selected = NULL
+                    
+                  )),
+                  
+                  #Charge of desired peptide (Specific charge must be in data set)
+                  selectizeInput('Charge', 'Peptide Charge', choices = '', options = list(
+                    valueField = 'Unique Charge',
+                    labelField = 'name',
+                    searchField = 'name',
+                    options = list( ),
+                    create = FALSE, 
+                    multiple = FALSE,
+                    selected = NULL
+                    
+                  )),
+                  
+                  #Number of plots to display
+                  sliderInput("n", "Number of Plots", value=1, min=1, max=10),
+                  
+                  #Off by default. Enabled if DIAlignR should be run and aligned chromatograms should be plotted.
+                  checkboxInput(inputId = "Align", "Plot Aligned", value = FALSE, width = NULL),
+                  
+                  #Name of the reference run if performing multiple pairwise alignments. Not required.
+                  # textInput(inputId = "Reference", "Select Reference Run for Alignment", value = "chludwig_K150309_013_SW_0"),
+                  selectizeInput('Reference', 'Select Reference Run for Alignment', choices = '', options = list(
+                    valueField = 'Run Name',
+                    labelField = 'name',
+                    searchField = 'name',
+                    options = list( ),
+                    create = FALSE, 
+                    multiple = FALSE,
+                    selected = NULL
+                  )),
+                  
+                  #Charge of desired peptide (Specific charge must be in data set)
+                  selectizeInput('Experiment', 'Experiment to Align', choices = '', options = list(
+                    valueField = 'Run Name',
+                    labelField = 'name',
+                    searchField = 'name',
+                    options = list( ),
+                    create = FALSE, 
+                    multiple = FALSE,
+                    selected = NULL
+                    
+                  )),
+                  
+                  #Plots to show
+                  checkboxInput("ref", "Reference Plot", value = T),
+                  checkboxInput("exp", "Experiment Plot", value = F),
+                  checkboxInput("expAligned", "Experiment Aligned Plot", value = F)
+                  
+                  
+                  
+                  ), # End of tabPanel 1
+        tabPanel( title = "Alignment Settings",
+                  
+                  ##***********************************************
+                  ##    Alignment Parameters
+                  ##***********************************************
+                  
+                  ## identifying
+                  checkboxInput('analyteInGroupLabel', 'Use Analyte Group Label', value = FALSE),
+                  
+                  ## identifying
+                  checkboxInput('identifying', 'Include Identiyfying Transitions', value = FALSE),
+                  
+                  ## oswMerged
+                  checkboxInput('oswMerged', 'Merged OSW File', value = TRUE),
+                  
+                  ## nameCutPattern
+                  textInput("nameCutPattern", "REGEX string for mzML filename", value = "(.*)(/)(.*)"),
+                  
+                  ## SgolayFiltOrd
+                  numericInput("maxFdrQuery", "OSW Extraction m-score threshold", value=0.05, min = NA, max = NA, step = NA),
+                  
+                  ## maxFdrLoess
+                  numericInput("maxFdrLoess", "Feature m-score threshold for LOESS fit", value=0.01, min = NA, max = NA, step = NA),
+                  
+                  ## analyteFDR
+                  numericInput("analyteFDR", "Analyte m-score threshold", value=1, min = 0, max = 1, step = NA),
+                  
+                  ## spanvalue
+                  numericInput("spanvalue", "Span Value for LOESS fit", value=0.1, min = NA, max = NA, step = NA),
+                  
+                  ## normalization
+                  selectizeInput('normalization', 'Normalization', selected = 'mean', choices = c('mean', 'l2'), 
+                                 options = list(
+                                   valueField = 'normalization',
+                                   labelField = 'name',
+                                   searchField = 'name',
+                                   options = list( ),
+                                   create = FALSE, 
+                                   multiple = FALSE,
+                                   selected = NULL
+                                 )
+                  ),
+                  
+                  ## simMeasure
+                  selectizeInput('simMeasure', 'Similarity Measure', selected = 'dotProductMasked', choices = c('dotProduct', 'cosineAngle', 'cosine2Angle', 'dotProductMasked', 'euclideanDist', 'covariance', 'correlation'), 
+                                 options = list(
+                    valueField = 'simMeasure',
+                    labelField = 'name',
+                    searchField = 'name',
+                    options = list( ),
+                    create = FALSE, 
+                    multiple = FALSE,
+                    selected = NULL
+                    )
+                  ),
+                  
+                  ## cosAngleThresh
+                  numericInput("cosAngleThresh", "Cosine Angle Threshold", value=0.3, min = NA, max = NA, step = NA),
+                  
+                  ## dotProdThresh
+                  numericInput("dotProdThresh", "dot-product Threshold", value=0.96, min = NA, max = NA, step = NA),
+                  
+                  ## XICfilter
+                  selectizeInput('XICfilter', 'XIC smoothing', selected = 'sgolay', choices = c('sgolay', 'none'), 
+                                 options = list(
+                                   valueField = 'XICfilter',
+                                   labelField = 'name',
+                                   searchField = 'name',
+                                   options = list( ),
+                                   create = FALSE, 
+                                   multiple = FALSE,
+                                   selected = NULL
+                                 )
+                  ),
+                  
+                  ## SgolayFiltOrd
+                  numericInput("SgolayFiltOrd", "Sgolay Poly Order", value=4, min = NA, max = NA, step = NA),
+                  
+                  ## SgolayFiltLen
+                  numericInput("SgolayFiltLen", "Sgolay Frame Length", value=9, min = NA, max = NA, step = NA),
+                  
+                  ## goFactor
+                  numericInput("goFactor", "Initial Gap Penalty", value=0.125, min = NA, max = NA, step = NA),
+                  
+                  ## geFactor
+                  numericInput("geFactor", "Subsequent Gap Penalty", value=40, min = NA, max = NA, step = NA),
+                  
+                  ## OverlapAlignment
+                  checkboxInput('OverlapAlignment', 'Overlap Alignment', value = TRUE),
+                  
+                  ## gapQuantile
+                  numericInput("gapQuantile", "Gap Quantile", value=0.5, min = 0, max = 1, step = NA),
+                  
+                  ## hardConstrain
+                  checkboxInput('hardConstrain', 'Hard Constrain', value = FALSE),
+                  
+                  ## samples4gradient
+                  numericInput("samples4gradient", "Mask Penalty", value=100, min = NA, max = NA, step = NA),
+                  
+                  ## samplingTime
+                  numericInput("samplingTime", "Chromatogram Datapoints Sampling Time", value=3.4, min = NA, max = NA, step = NA),
+                  
+                  ## RSEdistFactor
+                  numericInput("RSEdistFactor", "RSE Distance Factor", value=3.5, min = NA, max = NA, step = NA)
+                  
+                  
+                  
+                  ) # End of tabPanel 2
+      ) # End of tabsetPanel
       
-      # Library File Input
-      splitLayout(cellWidths = c("80%", "20%"),
-                  #Select 1 or set of mzML files,
-                  fileInput(inputId = "LibraryFile", "Choose a Library File", multiple = FALSE, accept = c(".pqp"), buttonLabel = icon("folder") ),
-                  ## Reset
-                  actionButton(inputId = "resetLibraryFile", label = 'X')
-      ),
-      tags$style(type='text/css', "#LibraryFile { width:100%; margin-top: 25px;}"),
-      tags$style(type='text/css', "#resetLibraryFile { width:100%; margin-top: 25px;}"),
-      
-      # OSW File Input
-      splitLayout(cellWidths = c("80%", "20%"),
-                  #Select 1 or set of mzML files,
-                  fileInput(inputId = "OSWFile", "Choose a OSW File", multiple = FALSE, accept = c(".osw"), buttonLabel = icon("folder") ),
-                  ## Reset
-                  actionButton(inputId = "resetOSWFile", label = 'X')
-      ),
-      tags$style(type='text/css', "#OSWFile { width:100%; margin-top: 25px;}"),
-      tags$style(type='text/css', "#resetOSWFile { width:100%; margin-top: 25px;}"),
-      
-      # Path to directory where mzml folder and osw folder are located. By default is set to the working directory.
-      splitLayout(cellWidths = c("17%", "83%"),
-                  ## GUI directroy selector
-                  shinyFiles::shinyDirButton( id = "interactiveWorkingDirectory", label = "",  title = "Set Working Directory (Location of mzML and osw folders)", icon = icon("folder") ),
-                  ## Text box for user to manually input working data path
-                  textInput(inputId = "WorkingDirectory", "Set Working Directory (Location of mzML and osw folders)",
-                            value = paste((gsub('............$', '', getwd())), 'extdata', sep = ''))
-      ),
-      tags$style(type='text/css', "#interactiveWorkingDirectory { width:100%; margin-top: 50px;}"),
-      tags$style(type='text/css', "#WorkingDirectory { width:100%; margin-top: 25px;}"),
-      
-      #Full peptide name including modifications
-      selectizeInput('Mod', 'Peptide Name', choices = '', options = list(
-        valueField = 'Unique Peptide string',
-        labelField = 'name',
-        searchField = 'name',
-        options = list( ),
-        create = FALSE, 
-        multiple = FALSE,
-        selected = NULL
-        
-      )),
-      
-      #Charge of desired peptide (Specific charge must be in data set)
-      selectizeInput('Charge', 'Peptide Charge', choices = '', options = list(
-        valueField = 'Unique Charge',
-        labelField = 'name',
-        searchField = 'name',
-        options = list( ),
-        create = FALSE, 
-        multiple = FALSE,
-        selected = NULL
-        
-      )),
-      
-      #Number of plots to display
-      sliderInput("n", "Number of Plots", value=1, min=1, max=10),
-      
-      #Off by default. Enabled if DIAlignR should be run and aligned chromatograms should be plotted.
-      checkboxInput(inputId = "Align", "Plot Aligned", value = FALSE, width = NULL),
-      
-      #Name of the reference run if performing multiple pairwise alignments. Not required.
-      # textInput(inputId = "Reference", "Select Reference Run for Alignment", value = "chludwig_K150309_013_SW_0"),
-      selectizeInput('Reference', 'Select Reference Run for Alignment', choices = '', options = list(
-        valueField = 'Run Name',
-        labelField = 'name',
-        searchField = 'name',
-        options = list( ),
-        create = FALSE, 
-        multiple = FALSE,
-        selected = NULL
-      )),
-      
-      #Charge of desired peptide (Specific charge must be in data set)
-      selectizeInput('Experiment', 'Experiment to Align', choices = '', options = list(
-        valueField = 'Run Name',
-        labelField = 'name',
-        searchField = 'name',
-        options = list( ),
-        create = FALSE, 
-        multiple = FALSE,
-        selected = NULL
-        
-      )),
-      
-      #Plots to show
-      checkboxInput("ref", "Reference Plot", value = T),
-      checkboxInput("exp", "Experiment Plot", value = F),
-      checkboxInput("expAligned", "Experiment Aligned Plot", value = F),
       
       
-      pre( id = "console" )
-      
-    ),
+     
+    ), # End of sidebarPanel
+
     
     
     mainPanel(
@@ -254,7 +371,7 @@ server <- function(input, output, session) {
       runs <- c(input$Reference, gsub('...........$', '', input$ChromatogramFile[,'name']))
       filenames <- filenames[filenames$runs %in% runs,]
       tictoc::tic('Pre-Loading mzML Chromatogram Files onto disk')
-      masterMzExperiment <- list()
+      mzPntrs <- list()
       for ( chromatogram_input_index_num in seq(1, length(filenames$runs)) ){
         run <- rownames(filenames)[ chromatogram_input_index_num ]
         message(sprintf("Cacheing mzML for %s of %s runs", run, length(filenames$runs)))
@@ -265,16 +382,14 @@ server <- function(input, output, session) {
         ## Get table of chromatogram incidces and respective transtion ids
         chromHead <- mzR::chromatogramHeader(mz)
         ## Store run id and mz object into master list
-        masterMzExperiment[[run]]$run <- run
-        mzExperiment <- list()
-        mzExperiment$mz <- mz
-        mzExperiment$chromHead <- chromHead
-        masterMzExperiment[[run]]$mzExperiment <- mzExperiment
+        mzPntrs[[run]] <- list()
+        mzPntrs[[run]]$mz <- mz
+        mzPntrs[[run]]$chromHead <- chromHead
       }
       tictoc::toc()
       
-      ## Store masterMzExperiment container
-      values$masterMzExperiment <- masterMzExperiment
+      ## Store mzPntrs container
+      values$mzPntrs <- mzPntrs
       ## Store chromatogram file run names
       values$chromnames <- gsub("\\.chrom\\.mzML$|\\.chrom\\.sqMass$", "", input$ChromatogramFile$name)
       ## Update Reference list
@@ -502,30 +617,38 @@ server <- function(input, output, session) {
             input$Mod <- "ANSS(UniMod:21)PTTNIDHLK(UniMod:259)"
             input$Charge <- 2
             # input$ChromatogramFile$datapath <- '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/mzml/chludwig_K150309_013_SW_0.chrom.mzML' 
-            input$ChromatogramFile <- data.frame(name=c("chludwig_K150309_013_SW_0.chrom.mzML", "chludwig_K150309_004b_SW_1_16.chrom.mzML"),
+            input$ChromatogramFile <- data.frame(name=c("chludwig_K150309_013_SW_0.chrom.mzML", "chludwig_K150309_012_SW_1_1.chrom.mzML"),
                                                  datapath=c('/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/mzml/chludwig_K150309_013_SW_0.chrom.mzML' ,
-                                                            '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/mzml/chludwig_K150309_004b_SW_1_16.chrom.mzML'),
+                                                            '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/mzml/chludwig_K150309_012_SW_1_1.chrom.mzML'),
                                                  stringsAsFactors=F)
             input$Reference <- "chludwig_K150309_013_SW_0"
-            input$Experiment <- "chludwig_K150309_004b_SW_1_16"
+            input$Experiment <- "chludwig_K150309_012_SW_1_1"
             input$LibraryFile$datapath <- '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/pqp/psgs_phospho_optimized_decoys.pqp'
             input$OSWFile$datapath <- '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/osw/merged.merged.osw'     
+            input$analyteInGroupLabel=FALSE; input$identifying=FALSE; 
+            input$oswMerged=TRUE; input$nameCutPattern="(.*)(/)(.*)";
+            input$maxFdrQuery=0.05; input$maxFdrLoess=0.01; input$analyteFDR=1; 
+            input$spanvalue=0.1;  input$normalization="mean"; input$simMeasure="dotProductMasked";
+            input$XICfilter="sgolay"; input$SgolayFiltOrd=4; input$SgolayFiltLen=9;
+            input$goFactor=0.125; input$geFactor=40; input$cosAngleThresh=0.3; input$OverlapAlignment=TRUE;
+            input$dotProdThresh=0.96; input$gapQuantile=0.5; input$hardConstrain=FALSE; 
+            input$samples4gradient=100;  input$samplingTime=3.4;  input$RSEdistFactor=3.5
             
             ## Spyogenes
             values <- list()
             dataPAth <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/"
-            analytes <- "QFNNTDIVLLEDFQK_3"
+            analytes <- "GEANVELTPELAFK_2"
             input <- list()
             input$WorkingDirectory <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/"
-            input$Mod <- "QFNNTDIVLLEDFQK"
-            input$Charge <- 3
+            input$Mod <- "GEANVELTPELAFK"
+            input$Charge <- 2
             # input$ChromatogramFile$datapath <- '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/mzml/chludwig_K150309_013_SW_0.chrom.mzML' 
             input$ChromatogramFile <- data.frame(name=c("hroest_K120808_Strep10%PlasmaBiolRepl1_R03_SW_filt.chrom.mzML", "hroest_K120809_Strep10%PlasmaBiolRepl2_R04_SW_filt.chrom.mzML"),
                                                  datapath=c('/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/mzml/hroest_K120808_Strep10%PlasmaBiolRepl1_R03_SW_filt.chrom.mzML' ,
                                                             '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/mzml/hroest_K120809_Strep10%PlasmaBiolRepl2_R04_SW_filt.chrom.mzML'),
                                                  stringsAsFactors=F)
-            input$Reference <- "hroest_K120808_Strep10%PlasmaBiolRepl1_R03_SW_filt"
-            input$Experiment <- "hroest_K120809_Strep10%PlasmaBiolRepl2_R04_SW_filt"
+            input$Experiment <- "hroest_K120808_Strep10%PlasmaBiolRepl1_R03_SW_filt"
+            input$Reference <- "hroest_K120809_Strep10%PlasmaBiolRepl2_R04_SW_filt"
             input$LibraryFile$datapath <- NULL
             input$OSWFile$datapath <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/osw/merged.osw"
             
@@ -538,8 +661,18 @@ server <- function(input, output, session) {
           runs <- c(input$Reference, input$Experiment)
           cat( sprintf( "Reference: %s\nExperiment: %s\n", input$Reference, input$Experiment))
           cat( sprintf( "Runs: %s\n", runs ) )
-          masterMzExperiment <- values$masterMzExperiment
-          AlignObjOutput <- DIAlignR::getAlignObjs(analytes = analytes, runs = runs, dataPath = dataPath, refRun = input$Reference, masterMzExperiment=masterMzExperiment)
+          mzPntrs <- values$mzPntrs
+          print(input$spanvalue)
+          AlignObjOutput <- DIAlignR::getAlignObjs(analytes = analytes, runs = runs, dataPath = dataPath, refRun = input$Reference, 
+                                                   analyteInGroupLabel = input$analyteInGroupLabel, identifying = input$identifying, 
+                                                   oswMerged = input$oswMerged, nameCutPattern = input$nameCutPattern,
+                                                   maxFdrQuery = input$maxFdrQuery, maxFdrLoess = input$maxFdrLoess, analyteFDR = input$analyteFDR, 
+                                                   spanvalue = input$spanvalue,  normalization = input$normalization, simMeasure = input$simMeasure,
+                                                   XICfilter = input$XICfilter, SgolayFiltOrd = input$SgolayFiltOrd, SgolayFiltLen = input$SgolayFiltLen,
+                                                   goFactor = input$goFactor, geFactor = input$geFactor, cosAngleThresh = input$cosAngleThresh, OverlapAlignment = input$OverlapAlignment,
+                                                   dotProdThresh = input$dotProdThresh, gapQuantile = input$gapQuantile, hardConstrain = input$hardConstrain, 
+                                                   samples4gradient = input$samples4gradient,  samplingTime = input$samplingTime,  RSEdistFactor = input$RSEdistFactor, 
+                                                   objType = "light", mzPntrs = mzPntrs)
           tictoc::toc()
           
           ## Generate Plot
@@ -552,7 +685,7 @@ server <- function(input, output, session) {
                 updateSliderInput(session, 'n', value=values$plot_i)
               }
               output[[ paste0('plot', values$plot_i) ]] <- renderPlotly({
-                
+               x <- 1+2 
                 pt1 <- plotly::ggplotly(k$prefU, dynamicTicks = TRUE)
                 
               }) # End renderPlotly
