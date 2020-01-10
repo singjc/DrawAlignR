@@ -8,9 +8,8 @@ To install this package, follow these commands:
 
 ``` r
 require("devtools")
-require("plotly")
 devtools::install_github("Roestlab/mstools")
-install.packages("pbmcapply")
+install_github("shubham1637/DIAlignR")
 install_github("Roestlab/DrawAlignR")
 library(DrawAlignR)
 ```
