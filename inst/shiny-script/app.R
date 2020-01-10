@@ -72,6 +72,18 @@ options(shiny.maxRequestSize=1000000*1024^2)
 ### https://stackoverflow.com/questions/47933524/how-do-i-synchronize-the-zoom-level-of-multiple-charts-with-plotly-js
 
 
+withConsoleRedirect <- function(containerId, expr) {
+  # Change type="output" to type="message" to catch stderr
+  # (messages, warnings, and errors) instead of stdout.
+  txt <- capture.output(results <- expr, type = "output")
+  if (length(txt) > 0) {
+    insertUI(paste0("#", containerId), where = "beforeEnd",
+             ui = paste0(txt, "\n", collapse = "")
+    )
+  }
+  results
+}
+
 ui <- fluidPage(
   
   useShinyjs(),  # Include shinyjs
@@ -300,9 +312,8 @@ titlePanel( title=div( img(src="DIAlignR-logo.jpg", width = 80, height = 80, ali
       
       
      
-      
-      
     ), # End of sidebarPanel
+
     
     
     mainPanel(
