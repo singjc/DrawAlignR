@@ -8,7 +8,9 @@ To install this package, follow these commands:
 
 ``` r
 require("devtools")
-install_github("ArshiaMahmoodi/DrawAlignR")
+devtools::install_github("Roestlab/mstools")
+install_github("shubham1637/DIAlignR")
+install_github("Roestlab/DrawAlignR")
 library(DrawAlignR)
 ```
 
