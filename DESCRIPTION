@@ -2,8 +2,10 @@ Package: DrawAlignR
 Type: Package
 Title: Visualizes Aligned Ms2 Chromatograms
 Version: 0.1.0
-Author: Arshia Mahmoodi, Justin Sing
-Maintainer: Arshia Mahmoodi <arshia.mahmoodi@mail.utoronto.ca>, Justin Sing <justincsing at gmail.com>
+Authors@R: c( person("Arshia", "Mahmoodi", email = "arshia.mahmoodi@mail.utoronto.ca", role = c("aut")),
+              person( "Justin", "Sing", email = "justincsing@gmail.com", role = c("cre") )
+            )
+Maintainers: Arshia Mahmoodi <arshia.mahmoodi@mail.utoronto.ca>
 Description: A package for the visualization of aligned Ms2 chromatograms. The main intended use of this package is
              to be used downstream of a chromatogram alignment tool for ms2 chromatograms, to draw and visualize
              the newly generated aligned chromatograms.
