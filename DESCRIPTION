@@ -2,34 +2,34 @@ Package: DrawAlignR
 Type: Package
 Title: Visualizes Aligned Ms2 Chromatograms
 Version: 0.1.0
-Author: Arshia Mahmoodi
-Maintainer: Arshia Mahmoodi <arshia.mahmoodi@mail.utoronto.ca>
+Author: Arshia Mahmoodi, Justin Sing
+Maintainer: Arshia Mahmoodi <arshia.mahmoodi@mail.utoronto.ca>, Justin Sing <justincsing at gmail.com>
 Description: A package for the visualization of aligned Ms2 chromatograms. The main intended use of this package is
              to be used downstream of a chromatogram alignment tool for ms2 chromatograms, to draw and visualize
              the newly generated aligned chromatograms.
 Depends: R (>= 3.6.1)
-Imports: shiny (>= 1.4.0),
-          shinyjs (>= 1.0),
-          shinyFiles (>= 0.7.5),
-          data.table (>= 1.12.8),
-          plyr (>= 1.05),
-          dplyr (>= 0.8.3),
-          dbplyr (>= 1.4.2),
-          tidyr (>= 1.0.0),
-          tidyverse (>= 1.3.0),
-          tibble (>= 2.1.3),
-          ggplot2 (>= 3.2.1),
-          gridExtra (>= 2.3.0),
-          ggrepel (>= 0.8.1),
-          latticeExtra (>= 0.6.28),
-          plotly (>= 4.9.1),
-          signal (>= 0.7.6),
-          crayon (>= 1.3.4),
-          pbmcapply (>= 1.5.0),
-          zoo (>= 1.8.6),
-          mzR (>= 2.20.0),
-          Rcpp (>= 1.0.3),
-          DIAlignR (>= 0.99.9),
+Imports: shiny,
+          shinyjs,
+          shinyFiles,
+          data.table,
+          plyr,
+          dplyr,
+          dbplyr,
+          tidyr,
+          tidyverse,
+          tibble,
+          ggplot2,
+          gridExtra,
+          ggrepel,
+          latticeExtra,
+          plotly,
+          signal,
+          crayon,
+          pbmcapply,
+          zoo,
+          mzR,
+          Rcpp,
+          DIAlignR,
           mstools
 Remotes: github::Roestlab/mstools,
          github::shubham1637/DIAlignR
