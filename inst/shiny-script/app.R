@@ -588,8 +588,7 @@ server <- function(input, output, session) {
                                                         show_n_transitions=6,
                                                         show_all_pkgrprnk=F,
                                                         # show_manual_annotation = manual_annotation_coordinates,
-                                                        show_legend=T,
-                                                        verbosity = 0 )
+                                                        show_legend=T )
               
               
               # )
@@ -660,7 +659,7 @@ server <- function(input, output, session) {
           analytes <- paste(input$Mod, "_", toString(input$Charge), sep="")
           runs <- c(input$Reference, input$Experiment)
           cat( sprintf( "Reference: %s\nExperiment: %s\n", input$Reference, input$Experiment))
-          cat( sprintf( "Runs: %s\n", runs ) )
+          # cat( sprintf( "Runs: %s\n", runs ) )
           mzPntrs <- values$mzPntrs
           print(input$spanvalue)
           AlignObjOutput <- DIAlignR::getAlignObjs(analytes = analytes, runs = runs, dataPath = dataPath, refRun = input$Reference, 
