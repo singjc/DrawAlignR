@@ -26,6 +26,12 @@ shiny::runGitHub(repo = "Roestlab/DrawAlignR/", username = "Roestlab", subdir = 
 ```
 
 # User Interface
+
+There are three major tabs in the left side pannel:
+* **General Settings**
+* **Alignment Settings**
+* **Plot Settings**
+
 ![](../inst/extdata/tutorial_figures/Tutorial_Fig_1.1.png)
 
 # Tutorial for Performing Alignment
@@ -67,11 +73,3 @@ You can also use the
 
 to plot the different output extracted ion chromatogram results
 ![](../inst/extdata/tutorial_figures/Tutorial_Fig_11.png)
-![](../inst/extdata/tutorial_figures/Tutorial_Fig_12.png)
-
-The chromatogram plots are interactive, in that you can hover over the data points to see the **retention time**, **intentisty** and specific **transition** values.
-![](../inst/extdata/tutorial_figures/Tutorial_Fig_13.png)
-
-You can also zoon in to specific regions of the chromatogram for a closer inspection.
-![](../inst/extdata/tutorial_figures/Tutorial_Fig_14.png)
-
