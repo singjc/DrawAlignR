@@ -53,7 +53,7 @@ withConsoleRedirect <- function(containerId, expr) {
   results
 }
 
-source("uiTabs.R")
+source("../../R/uiTabs.R")
 
 ui <- fluidPage(
   
