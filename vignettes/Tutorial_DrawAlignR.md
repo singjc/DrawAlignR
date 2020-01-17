@@ -35,7 +35,7 @@ There are three major tabs in the left side pannel:
 * **Plot Settings**
     * The user can change various plot visualization settings
 
-![](/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/tutorial_figures/Tutorial_Fig_1.1.png)
+![](../inst/extdata/tutorial_figures/Tutorial_Fig_1.1.png)
 
 <div style="page-break-after: always;"></div>
 
@@ -44,7 +44,7 @@ There are three major tabs in the left side pannel:
 
 Use the Set Working Directory button to set the working directory that contains an mzml folder with .chrom.mzml files and an osw file with a merged.osw file. Or you can directly enter the path to the working directory using the input textbox area.
 
-![](/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/tutorial_figures/Tutorial_Fig_2.png)
+![](../inst/extdata/tutorial_figures/Tutorial_Fig_2.png)
 
 <div style="page-break-after: always;"></div>
 
@@ -52,7 +52,7 @@ Use the Set Working Directory button to set the working directory that contains 
 
 Use the Choose a Chromatogram file button to select a chromatogram file(s) to upload. You can choose multiple files.
 
-![](/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/tutorial_figures/Tutorial_Fig_3.png)
+![](../inst/extdata/tutorial_figures/Tutorial_Fig_3.png)
 
 <div style="page-break-after: always;"></div>
 
@@ -61,7 +61,7 @@ Use the Choose a Chromatogram file button to select a chromatogram file(s) to up
 Choose which peptide you want to visualze using the Peptide dropdown list. The dropdown list is searchable, so you can easily search for a specific peptide to visualize.
 The list of peptides is extracted from either the input library file if abailable, or an osw file if available.
 
-![](/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/tutorial_figures/Tutorial_Fig_4.png)
+![](../inst/extdata/tutorial_figures/Tutorial_Fig_4.png)
 
 <div style="page-break-after: always;"></div>
 
@@ -69,7 +69,7 @@ The list of peptides is extracted from either the input library file if abailabl
 
 Choose which charge state to visualize for the selcted peptide.
 
-![](/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/tutorial_figures/Tutorial_Fig_5.png)
+![](../inst/extdata/tutorial_figures/Tutorial_Fig_5.png)
 
 <div style="page-break-after: always;"></div>
 
@@ -77,7 +77,7 @@ Choose which charge state to visualize for the selcted peptide.
 
 Choose which chromatogram file to use as the reference run, and which chromatogram file to use as the experiment run. These are set through the searchable dropdown lists, which extracts the filenames from the supplied chromatogram files without the .chrom.mzml extension
 
-![](/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/tutorial_figures/Tutorial_Fig_6.png)
+![](../inst/extdata/tutorial_figures/Tutorial_Fig_6.png)
 
 <div style="page-break-after: always;"></div>
 
@@ -92,11 +92,11 @@ You can also use the
 
 to plot the different output extracted ion chromatogram results
 
-![](/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/tutorial_figures/Tutorial_Fig_7.png)
+![](../inst/extdata/tutorial_figures/Tutorial_Fig_7.png)
 
 <div style="page-break-after: always;"></div>
 
-![](/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/tutorial_figures/Tutorial_Fig_8.png)
+![](../inst/extdata/tutorial_figures/Tutorial_Fig_8.png)
 
 <div style="page-break-after: always;"></div>
 
@@ -104,13 +104,13 @@ to plot the different output extracted ion chromatogram results
 
 Select the Alignment settings tab to change various alignment settings
 
-![](/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/tutorial_figures/Tutorial_Fig_9.png)
+![](../inst/extdata/tutorial_figures/Tutorial_Fig_9.png)
 
 <div style="page-break-after: always;"></div>
 
 ## Zoom into each chromatogram for further inspection
 
-![](/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/tutorial_figures/Tutorial_Fig_10.png)
+![](../inst/extdata/tutorial_figures/Tutorial_Fig_10.png)
 
 <div style="page-break-after: always;"></div>
 
@@ -118,7 +118,7 @@ Select the Alignment settings tab to change various alignment settings
 
 You can hover over the chromatogram traces to see information such as Retention time and Intensity
 
-![](/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/tutorial_figures/Tutorial_Fig_11.png)
+![](../inst/extdata/tutorial_figures/Tutorial_Fig_11.png)
 
 <div style="page-break-after: always;"></div>
 
@@ -126,7 +126,7 @@ You can hover over the chromatogram traces to see information such as Retention 
 
 The user can also just visualize the chromatograms alone without performing alignment to visually inspect each trace. If the user has an IPF dataset, they can visualize site-determining ions (unique identifying transitions) of the modified peptide.
 
-![](/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/tutorial_figures/Tutorial_Fig_12.png)
+![](../inst/extdata/tutorial_figures/Tutorial_Fig_12.png)
 
 <div style="page-break-after: always;"></div>
 
@@ -134,7 +134,7 @@ The user can also just visualize the chromatograms alone without performing alig
 
 The user can choose to display the precursor tace, or the 6 detecting traces, or the unique identifying traces. The precursor trace is displayed in `black`, the detecting traces are displayed in a `light gray` and the unique identifying transitions are `colored`
 
-![](/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/tutorial_figures/Tutorial_Fig_13.png)
+![](../inst/extdata/tutorial_figures/Tutorial_Fig_13.png)
 
 <div style="page-break-after: always;"></div>
 
@@ -142,7 +142,7 @@ The user can choose to display the precursor tace, or the 6 detecting traces, or
 
 The user can hover of the traces to display the transition scores such as the transitions posterior error probability, q-value and score.
 
-![](/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/tutorial_figures/Tutorial_Fig_14.png)
+![](../inst/extdata/tutorial_figures/Tutorial_Fig_14.png)
 
 <div style="page-break-after: always;"></div>
 
@@ -150,7 +150,7 @@ The user can hover of the traces to display the transition scores such as the tr
 
 The user can choose to display the other potential peak-group ranks found by OpenSWATH
 
-![](/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/tutorial_figures/Tutorial_Fig_15.png)
+![](../inst/extdata/tutorial_figures/Tutorial_Fig_15.png)
 
 <div style="page-break-after: always;"></div>
 
@@ -158,7 +158,7 @@ The user can choose to display the other potential peak-group ranks found by Ope
 
 The user can click on the legend to hide transitions they don't want to display
 
-![](/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/tutorial_figures/Tutorial_Fig_16.png)
+![](../inst/extdata/tutorial_figures/Tutorial_Fig_16.png)
 
 <div style="page-break-after: always;"></div>
 
@@ -166,4 +166,4 @@ The user can click on the legend to hide transitions they don't want to display
 
 The user can choose to display a single transition by double clicking on the transition legend they wish to dispaly
 
-![](/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/tutorial_figures/Tutorial_Fig_17.png)
+![](../inst/extdata/tutorial_figures/Tutorial_Fig_17.png)
