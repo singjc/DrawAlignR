@@ -53,9 +53,11 @@ withConsoleRedirect <- function(containerId, expr) {
   results
 }
 
-source(file.path(system.file("R", package = "DrawAlignR"), "uiTabs.R"), local = TRUE)
+
 
 ui <- fluidPage(
+  
+  source(file.path("../../R/uiTabs.R", local = TRUE)),
   
   useShinyjs(),  # Include shinyjs
   
