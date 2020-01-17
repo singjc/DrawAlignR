@@ -33,9 +33,7 @@ options(shiny.maxRequestSize=1000000*1024^2)
 ### TODO in the future: Link zooming
 ### https://stackoverflow.com/questions/47933524/how-do-i-synchronize-the-zoom-level-of-multiple-charts-with-plotly-js
 
-source( "../../R/helpers.R" )
-source( "../../R/uiTabs.R" )
-source( "../../R/getmzPntrs.R")
+
 library(shiny)
 library(shinyjs)
 library(shinyFiles)
