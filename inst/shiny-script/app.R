@@ -53,6 +53,8 @@ withConsoleRedirect <- function(containerId, expr) {
   results
 }
 
+source("uiTabs.R")
+
 ui <- fluidPage(
   
   useShinyjs(),  # Include shinyjs
