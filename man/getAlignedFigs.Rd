@@ -12,8 +12,10 @@ getAlignedFigs(
   XICs.eXp,
   refPeakLabel,
   annotatePeak = FALSE,
+  annotateOrgPeak = FALSE,
   global = NULL,
-  input = NULL
+  input = NULL,
+  smooth_chromatogram = NULL
 )
 }
 \arguments{

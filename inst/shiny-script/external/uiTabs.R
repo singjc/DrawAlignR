@@ -71,6 +71,12 @@ GeneralSettingsTab <- shiny::tabPanel( title = "General Settings",
                                 #Number of plots to display
                                 shiny::sliderInput("n", "Number of Plots", value=1, min=1, max=10),
                                 
+                                shiny::checkboxGroupInput("n_runs", "Choose Runs to Display:",
+                                                   choices = NULL,
+                                                   selected = NULL,
+                                                   inline = T
+                                ),
+                                
                                 #Off by default. Enabled if DIAlignR should be run and aligned chromatograms should be plotted.
                                 shiny::checkboxInput(inputId = "Align", "Plot Aligned", value = FALSE, width = NULL),
                                 
@@ -87,18 +93,19 @@ GeneralSettingsTab <- shiny::tabPanel( title = "General Settings",
                                 )),
                                 
                                 #Charge of desired peptide (Specific charge must be in data set)
-                                shiny::selectizeInput('Experiment', 'Experiment to Align', choices = '', options = list(
+                                shiny::selectizeInput('Experiment', 'Experiment(s) to Align', choices = '', multiple = TRUE, options = list(
                                   valueField = 'Run Name',
                                   labelField = 'name',
                                   searchField = 'name',
                                   options = list( ),
                                   create = FALSE, 
-                                  multiple = FALSE,
+                                  multiple = TRUE,
                                   selected = NULL
                                   
                                 )),
                                 
                                 #Plots to show
+                                shiny::checkboxInput(inputId = "OriginalRTAnnotation", "Show Original Peak Annotation", value = FALSE, width = NULL),
                                 shiny::checkboxInput("ref", "Reference Plot", value = T),
                                 shiny::checkboxInput("exp", "Experiment Plot", value = F),
                                 shiny::checkboxInput("expAligned", "Experiment Aligned Plot", value = F)
