@@ -5,6 +5,8 @@
 #' @import shiny
 #' @import shinyjs
 #' @import shinyFiles 
+#' @import shinyWidgets
+#' @import shinyBS
 #' @import plotly
 #' @import DIAlignR
 #' @import mstools
@@ -29,6 +31,12 @@ options(shiny.maxRequestSize=1000000*1024^2)
 ## Some usefull functionality here
 # install.packages("shinyjs")
 
+## Cool Widgets
+# install.packages("shinyWidgets")
+
+## Extra Bootstrap controls
+# install.packages("shinyBS")
+
 
 ### TODO in the future: Link zooming
 ### https://stackoverflow.com/questions/47933524/how-do-i-synchronize-the-zoom-level-of-multiple-charts-with-plotly-js
@@ -37,6 +45,8 @@ options(shiny.maxRequestSize=1000000*1024^2)
 library(shiny)
 library(shinyjs)
 library(shinyFiles)
+library(shinyWidgets)
+library(shinyBS)
 library(plotly)
 library(mstools)
 library(DIAlignR)
@@ -55,6 +65,7 @@ withConsoleRedirect <- function(containerId, expr) {
 
 
 source( "external/uiTabs.R", local = TRUE )
+source( "external/server_help_description_text.R", local = TRUE )
 ui <- fluidPage(
   
   useShinyjs(),  # Include shinyjs
@@ -89,6 +100,8 @@ ui <- fluidPage(
 source( "../../R/helpers.R" )
 source( "../../R/getmzPntrs.R")
 server <- function(input, output, session) {
+  
+  server_help_description_text(input, output, session)
   
   ## reactive values object to store some re-usable stuff
   values <- reactiveValues()
@@ -139,7 +152,7 @@ server <- function(input, output, session) {
           names(global$chromFile) <- lapply(global$chromFile, basename)
           
           ## Update global most recent directroy
-          global$mostRecentDir <- basename(global$chromFile[[1]])
+          global$mostRecentDir <- dirname(global$chromFile[[1]])
           
           ## Store chromatogram file run names
           # values$chromnames <- gsub("\\.chrom\\.mzML$|\\.chrom\\.sqMass$", "", input$ChromatogramFile$name)
@@ -148,8 +161,6 @@ server <- function(input, output, session) {
           updateSelectizeInput( session, inputId = "Reference", choices = as.list(values$chromnames) )
           ## Update Experiment list with first entry removed
           updateSelectizeInput( session, inputId = "Experiment", choices = as.list(values$chromnames[-1]), selected = as.list(values$chromnames[-1])  )
-          ## Update SliderInpu Max 
-          shiny::updateSliderInput( session, "n", max = length(values$chromnames) )
           ## Update n chroms input
           n_runs_index <- c(seq(1, length(values$chromnames)))
           names(n_runs_index) <-  paste( "Run ", seq(1, length((values$chromnames))), sep='')
@@ -189,6 +200,8 @@ server <- function(input, output, session) {
     updateSelectizeInput( session, inputId = "Experiment", choices = as.list(values$Experiments_to_Align), selected = as.list(values$Experiments_to_Align) )
   })
   
+  if ( input$WorkingDirectoryInput  ) {
+    
   ## Observe interactive set working directory button
   observeEvent( input$interactiveWorkingDirectory, {
     tryCatch(
@@ -240,6 +253,8 @@ server <- function(input, output, session) {
     ) # End tryCatch
   })
   
+  }
+  
   ## Observe LibraryFile button
   observeEvent( input$LibraryFile, {
     tryCatch(
@@ -267,7 +282,7 @@ server <- function(input, output, session) {
           names(global$libFile) <- lapply(global$libFile, basename)
           
           ## Update global most recent directroy
-          global$mostRecentDir <- basename( global$libFile )
+          global$mostRecentDir <- dirname( global$libFile )
           
         }
         
@@ -308,7 +323,7 @@ server <- function(input, output, session) {
           names(global$oswFile) <- lapply(global$oswFile, basename)
           
           ## Update global most recent directroy
-          global$mostRecentDir <- basename( global$oswFile )
+          global$mostRecentDir <- dirname( global$oswFile )
           
           ## Load OSW file
           osw_df <- mstools::getOSWData_( oswfile=global$oswFile[[1]], decoy_filter = TRUE, ms2_score = TRUE, ipf_score =  FALSE)
