@@ -51,17 +51,17 @@ library(plotly)
 library(mstools)
 library(DIAlignR)
 
-withConsoleRedirect <- function(containerId, expr) {
-  # Change type="output" to type="message" to catch stderr
-  # (messages, warnings, and errors) instead of stdout.
-  txt <- capture.output(results <- expr, type = "output")
-  if (length(txt) > 0) {
-    insertUI(paste0("#", containerId), where = "beforeEnd",
-             ui = paste0(txt, "\n", collapse = "")
-    )
-  }
-  results
-}
+# withConsoleRedirect <- function(containerId, expr) {
+#   # Change type="output" to type="message" to catch stderr
+#   # (messages, warnings, and errors) instead of stdout.
+#   txt <- capture.output(results <- expr, type = "output")
+#   if (length(txt) > 0) {
+#     insertUI(paste0("#", containerId), where = "beforeEnd",
+#              ui = paste0(txt, "\n", collapse = "")
+#     )
+#   }
+#   results
+# }
 
 
 source( "external/uiTabs.R", local = TRUE )
@@ -95,15 +95,15 @@ ui <- fluidPage(
                        # log output
                        textOutput( 'log' )
                      )
-      ),
+      )
       
     ) # End of mainPanel
   ) # End of sidebarLayout
 ) # End of ui
 
-# source("../../R/helpers.R")
-# source( "../../R/getmzPntrs.R")
-# source( "../../R/curateXICplot.R")
+source("../../R/helpers.R")
+source( "../../R/getmzPntrs.R")
+source( "../../R/curateXICplot.R")
 server <- function(input, output, session) {
   
   server_help_description_text(input, output, session)
@@ -138,7 +138,8 @@ server <- function(input, output, session) {
   
   observeEvent( input$chromType_Choice, {
     print(sprintf("Using chromtype: %s", input$chromType_Choice))
-    
+    tryCatch(
+      expr = {
     if ( grepl(".*mzml", input$chromType_Choice) ){
       if ( input$WorkingDirectoryInput  ) {
         global$chromFile <- global$foundChromFiles$mzml
@@ -179,7 +180,11 @@ server <- function(input, output, session) {
     } else {
       warning(sprintf("There was an issue with the chromType, selection is not a currently supported format: %s", input$chromType_Choice))
     }
-    
+      },
+    error = function(e){
+      message(sprintf("[chromType_Choice:cache mzML] There was the following error that occured during Chromatogram Path Searching: %s\n", e$message))
+    }
+    ) # End tryCatch
     
   })
 

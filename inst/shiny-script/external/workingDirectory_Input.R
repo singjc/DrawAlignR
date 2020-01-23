@@ -11,13 +11,13 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
         ##*********************************
         tryCatch(
           expr = {
-            shinyDirChoose(input, 'interactiveWorkingDirectory', roots = c( `Working Directory` =  "../", home = "~", root = .Platform$file.sep, `Recent Directory` = global$mostRecentDir ), defaultRoot = 'Recent Directory', defaultPath = .Platform$file.sep  )
+            shinyDirChoose(input, 'interactiveWorkingDirectory', roots = c( `Working Directory` =  "../", home = path.expand("~"), root = .Platform$file.sep, `Recent Directory` = global$mostRecentDir ), defaultRoot = 'Recent Directory', defaultPath = .Platform$file.sep  )
             if ( input$WorkingDirectory!="" ) {
-              global$datapath <- input$WorkingDirectory
+              global$datapath <- normalizePath( input$WorkingDirectory )
               ## Get mapping of runs to filename
               values$runs_filename_mapping <- DIAlignR::getRunNames(global$datapath, oswMerged = TRUE)
               ## Search working directory for osw file, mzml files, pqpfiles
-              subDirs <- list.dirs( path = global$datapath, full.names = T, recursive = F )
+              subDirs <- normalizePath( list.dirs( path = global$datapath, full.names = T, recursive = F ) )
             } else {
               
               ### Create a reactive object to store working directory
@@ -32,12 +32,12 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                 if ( dir()$root=='Working Directory' ){
                   root_node <- dirname(getwd())
                 } else if ( dir()$root == 'home' ) {
-                  root_node <- "~"
+                  root_node <- path.expand("~")
                 } else {
                   root_node <- .Platform$file.sep
                 }
                 ## Get full working directroy of user selected directory
-                global$datapath <- paste( root_node, file.path( paste( unlist(dir()$path[-1]), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep )
+                global$datapath <- normalizePath( paste( normalizePath(root_node), file.path( paste( unlist(dir()$path[-1]), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep ) )
                 ## Get mapping of runs to filename
                 values$runs_filename_mapping <- DIAlignR::getRunNames(global$datapath, oswMerged = TRUE)
                 ## Update global most recent directroy
@@ -49,16 +49,14 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
             }
             
             ## Search working directory for osw file, mzml files, pqpfiles
-            subDirs <- list.dirs( path = global$datapath, full.names = T, recursive = F )
+            subDirs <- normalizePath( list.dirs( path = global$datapath, full.names = T, recursive = F ) )
           },
           error = function(e){
             message(sprintf("[WorkingDirectoryInput] There was the following error that occured during Working Directory Button observation: %s\n", e$message))
           }
         ) # End tryCatch
-        
         ## Search working directory for osw file, mzml files, pqpfiles
-        subDirs <- list.dirs( path = global$datapath, full.names = T, recursive = F ) 
-        
+        subDirs <- normalizePath( list.dirs( path = global$datapath, full.names = T, recursive = F ) )
         ##*********************************
         ##    OSW Path Search
         ##*********************************
@@ -66,13 +64,13 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
         tryCatch(
           expr = {
             if ( "osw" %in% basename(subDirs) ) {
-              target_subdir <- paste(global$datapath ,'osw/',sep = .Platform$file.sep)
+              target_subdir <- normalizePath( paste(global$datapath ,'osw/',sep = .Platform$file.sep) )
               if ( any(grepl("\\.osw", list.files(subDirs))) ) {
                 ## Search for OSW folder
-                files_in_osw_dir <- list.files( target_subdir, pattern = "*osw$" ,full.names = T )
+                files_in_osw_dir <- normalizePath( list.files( target_subdir, pattern = "*osw$" ,full.names = T ) )
                 if ( length(files_in_osw_dir) > 1 ){
                   warning( sprintf("There were %s osw files found, taking first file!!")) # TODO: If user uses non merged osw file?
-                  files_in_osw_dir <- files_in_osw_dir[1]
+                  files_in_osw_dir <- normalizePath( files_in_osw_dir[1] )
                 }
                 global$oswFile <- files_in_osw_dir
                 
@@ -84,6 +82,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                 osw_df %>%
                   dplyr::filter( !is.na(m_score_filter_var)) -> osw_df
                 values$osw_df <- osw_df
+                print(values$osw_df)
                 tictoc::toc()
                 if (  is.null( values$lib_df ) ){
                   ## Get list of unique modified peptides
@@ -109,10 +108,10 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
         tryCatch(
           expr = {
             if ( "pqp" %in% basename(subDirs)  ) {
-              target_subdir <- paste(global$datapath ,'pqp/',sep = .Platform$file.sep)
+              target_subdir <- normalizePath( paste(global$datapath ,'pqp/',sep = .Platform$file.sep) )
               if ( any(grepl("\\.pqp", list.files(subDirs))) ){
                 ## Search for OSW folder
-                find_file <- list.files( target_subdir, pattern = "*pqp$" ,full.names = T )
+                find_file <- normalizePath( list.files( target_subdir, pattern = "*pqp$" ,full.names = T ) )
                 if ( length(find_file) > 1 ){
                   warning( sprintf("There were %s pqp files found, taking first file!!")) # TODO: If user uses non merged osw file?
                   find_file <- find_file[1]
@@ -122,6 +121,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                 tictoc::tic("Reading and Cacheing Library File")
                 lib_df <- mstools::getPepLibData_( global$libFile[[1]] )
                 values$lib_df <- lib_df
+                print(values$lib_df)
                 tictoc::toc()
                 ## Get list of unique modified peptides
                 uni_peptide_list <- as.list(unique( lib_df$MODIFIED_SEQUENCE )) 
@@ -148,7 +148,6 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
               chromTypes_available <- grep("mzml|sqmass", basename(subDirs), value=TRUE)
               output$chromTypes_available <- renderText({ chromTypes_available })
               global$chromTypes_available <- chromTypes_available
-              print("Updating chromtype choice")
               chromTypes_available_list <- list()
               chromTypes_available_list <- (paste("Use ", chromTypes_available, sep=""))
               names(chromTypes_available_list) <- (paste("Use ", chromTypes_available, sep=""))
@@ -159,26 +158,26 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                                                status = "primary",
                                                checkbox = TRUE
               )
-              
               if ( "mzml" %in% basename(subDirs) ) {
-                target_subdir <- paste(global$datapath ,'mzml/',sep = .Platform$file.sep)
+                message("Searching mzml folder")
+                target_subdir <- normalizePath( paste(global$datapath ,'mzml/',sep = .Platform$file.sep) )
                 if ( any(grepl("\\.mzML", list.files(subDirs))) ){
                   ## Search for OSW folder
-                  find_file <- list.files( target_subdir, pattern = "*mzML$" ,full.names = T )
+                  find_file <- normalizePath( list.files( target_subdir, pattern = "*mzML$" ,full.names = T ) )
                   
                   global$foundChromFiles$mzml <- find_file
                   names(global$foundChromFiles$mzml) <- lapply(global$foundChromFiles$mzml, function(file_path){gsub("\\..*", "", basename(file_path))} )
-                  
                 } else {
                   warning( sprintf("There was no mzml file found in mzml directory:\n%s\n", target_subdir) )
                 }
               }
               
               if ( "sqmass" %in% basename(subDirs) ) {
-                target_subdir <- paste(global$datapath ,'sqmass/',sep = .Platform$file.sep)
+                message("Searching sqmass folder")
+                target_subdir <- normalizePath( paste(global$datapath ,'sqmass/',sep = .Platform$file.sep) )
                 if ( any(grepl("\\.sqMass", list.files(subDirs))) ){
                   ## Search for OSW folder
-                  find_file <- list.files( target_subdir, pattern = "*sqMass$" ,full.names = T )
+                  find_file <- normalizePath( list.files( target_subdir, pattern = "*sqMass$" ,full.names = T ) )
                   
                   global$foundChromFiles$sqmass <- find_file
                   names(global$foundChromFiles$sqmass) <- lapply(global$foundChromFiles$sqmass, function(file_path){gsub("\\..*", "", basename(file_path))} )
@@ -197,7 +196,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
             message(sprintf("[WorkingDirectoryInput:findChroms] There was the following error that occured during Chromatogram Path Searching: %s\n", e$message))
           }
         ) # End tryCatch
-        
+        message("Finished workingDirectory Input parsing")
       }
     })
   return(list(global=global, values=values))
