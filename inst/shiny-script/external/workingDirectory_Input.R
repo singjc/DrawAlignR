@@ -82,7 +82,6 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                 osw_df %>%
                   dplyr::filter( !is.na(m_score_filter_var)) -> osw_df
                 values$osw_df <- osw_df
-                print(values$osw_df)
                 tictoc::toc()
                 if (  is.null( values$lib_df ) ){
                   ## Get list of unique modified peptides
@@ -121,7 +120,6 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                 tictoc::tic("Reading and Cacheing Library File")
                 lib_df <- mstools::getPepLibData_( global$libFile[[1]] )
                 values$lib_df <- lib_df
-                print(values$lib_df)
                 tictoc::toc()
                 ## Get list of unique modified peptides
                 uni_peptide_list <- as.list(unique( lib_df$MODIFIED_SEQUENCE )) 
