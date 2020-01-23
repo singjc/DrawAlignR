@@ -16,6 +16,8 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
               global$datapath <- input$WorkingDirectory
               ## Get mapping of runs to filename
               values$runs_filename_mapping <- DIAlignR::getRunNames(global$datapath, oswMerged = TRUE)
+              ## Search working directory for osw file, mzml files, pqpfiles
+              subDirs <- list.dirs( path = global$datapath, full.names = T, recursive = F )
             } else {
               
               ### Create a reactive object to store working directory
@@ -53,6 +55,9 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
             message(sprintf("[WorkingDirectoryInput] There was the following error that occured during Working Directory Button observation: %s\n", e$message))
           }
         ) # End tryCatch
+        
+        ## Search working directory for osw file, mzml files, pqpfiles
+        subDirs <- list.dirs( path = global$datapath, full.names = T, recursive = F ) 
         
         ##*********************************
         ##    OSW Path Search
