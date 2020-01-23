@@ -72,7 +72,7 @@ getSingleAlignedChrom <- function(XIC_group, idx, t.ref){
 #' XICs.eXp <- AlignObjOutput[["QFNNTDIVLLEDFQK_3"]][[3]]
 #' refPeakLabel <- AlignObjOutput[["QFNNTDIVLLEDFQK_3"]][[4]]
 getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPeakLabel,
-                           annotatePeak = FALSE, annotateOrgPeak = FALSE, global = NULL, input = NULL, smooth_chromatogram = NULL){
+                           annotatePeak = FALSE, annotateOrgPeak = FALSE, global = NULL, values = NULL, input = NULL, smooth_chromatogram = NULL){
   
   AlignedIndices <- cbind(AlignObj@indexA_aligned, AlignObj@indexB_aligned,
                           AlignObj@score)
@@ -87,6 +87,7 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
   
   ## Get transition information from the osw file
   transition_table <- mstools::getPepLibData_( global$oswFile[[1]], mod_peptide_id = c(input$Mod, mstools::unimodTocodename(input$Mod)) )
+  values$transition_table <- transition_table
   
   ##**************************
   ## REFERENCE Chromatogram 
@@ -106,7 +107,7 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
     }
   }
   g <- ggplot2::ggplot()
-  invisible( capture.output(suppressWarnings(
+  tictoc::tic("Plotting Ref")
   g <- mstools::getXIC( graphic_obj = g, 
                         df_lib = transition_table, 
                         mod = input$Mod, 
@@ -122,14 +123,12 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
                         top_trans_mod_list=NULL, 
                         show_n_transitions=input$nIdentifyingTransitions,
                         transition_dt=NULL )
-  )))
   max_Int <- g$max_Int
   g <- g$graphic_obj
   
   ###################################
   ##     ADD OSW RESULTS INFO     ###
   ###################################
-  invisible( capture.output(suppressWarnings(
   g <- mstools::getXIC( graphic_obj = g, 
                         df_lib = transition_table, 
                         mod = input$Mod, 
@@ -145,10 +144,9 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
                         show_peak_info_tbl=F,
                         FacetFcnCall=NULL, 
                         show_legend = T  )
-  )))
   max_Int <- g$max_Int
   g <- g$graphic_obj
-  
+  tictoc::toc()
   prefU <- g + ggplot2::xlab("Reference RT")
   
   ##**************************
@@ -307,13 +305,7 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
   
   if ( annotateOrgPeak ){
     
-    db <- DBI::dbConnect( RSQLite::SQLite(), global$oswFile[[1]] )
-    if ( DBI::dbExistsTable( db, "SCORE_IPF" ) ){
-      use_ipf_score <- TRUE
-    } else {
-      use_ipf_score <- FALSE
-    }
-    DBI::dbDisconnect( db )
+    use_ipf_score <- Score_IPF_Present( global$oswFile[[1]] )
     
     ## Experiment
     run_name <- gsub('_osw_chrom[.]sqMass$|[.]chrom.mzML$|[.]chrom.sqMass$', '', basename(global$chromFile[ grepl(eXpRun, names(global$chromFile)) ][[1]]))
@@ -435,7 +427,7 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
 #' plotAlignedAnalytes(AlignObjOutput)
 #' @export
 plotAlignedAnalytes <- function(AlignObjOutput, plotType = "All", DrawAlignR = FALSE,
-                                annotatePeak = FALSE, annotateOrgPeak = FALSE, saveFigs = FALSE, global = NULL, input = NULL){
+                                annotatePeak = FALSE, annotateOrgPeak = FALSE, saveFigs = FALSE, global = NULL, values = NULL, input = NULL){
   if((length(AlignObjOutput) > 1) | saveFigs){
     grDevices::pdf("AlignedAnalytes.pdf")
   }
@@ -450,12 +442,8 @@ plotAlignedAnalytes <- function(AlignObjOutput, plotType = "All", DrawAlignR = F
     analyte <- names(AlignObjOutput)[i]
     refRun <- names(AlignObjOutput[[i]])[2]
     eXpRun <- names(AlignObjOutput[[i]])[3]
-    
-    print("Using AlignObjs form:")
-    print(names(AlignObjOutput[[1]]))
-    
-    
-    figs <- getAlignedFigs(AlignObj, refRun, eXpRun, XICs.ref, XICs.eXp, refPeakLabel, annotatePeak, annotateOrgPeak, global, input)
+
+    figs <- getAlignedFigs(AlignObj, refRun, eXpRun, XICs.ref, XICs.eXp, refPeakLabel, annotatePeak, annotateOrgPeak, global, values, input)
     
     if(DrawAlignR){
       cat("Succesfully drew ref, exp and exp aligned figs")

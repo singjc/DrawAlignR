@@ -66,6 +66,10 @@ withConsoleRedirect <- function(containerId, expr) {
 
 source( "external/uiTabs.R", local = TRUE )
 source( "external/server_help_description_text.R", local = TRUE )
+source( "external/chromFile_Input_Button.R", local = TRUE )
+source( "external/libFile_Input_Button.R", local = TRUE )
+source( "external/oswFile_Input_Button.R", local = TRUE )
+source( "external/workingDirectory_Input.R", local = TRUE )
 ui <- fluidPage(
   
   useShinyjs(),  # Include shinyjs
@@ -99,6 +103,7 @@ ui <- fluidPage(
 
 source( "../../R/helpers.R" )
 source( "../../R/getmzPntrs.R")
+source( "../../R/curateXICplot.R")
 server <- function(input, output, session) {
   
   server_help_description_text(input, output, session)
@@ -106,7 +111,9 @@ server <- function(input, output, session) {
   ## reactive values object to store some re-usable stuff
   values <- reactiveValues()
   values$transition_selection_list <- list()
-  global <- reactiveValues(datapath = getwd(), chromFile = getwd(), libFile = getwd(), oswFile = getwd(), mostRecentDir = getwd() )
+  values$lib_df <- NULL
+  global <- reactiveValues(datapath = getwd(), chromFile = getwd(), libFile = getwd(), oswFile = getwd(), mostRecentDir = getwd(), foundChromFiles = list(mzml=list(), sqmass=list()), chromTypes_available = "" )
+  output$chromTypes_available <- renderText({ '' })
   
   # TODO: Remove these clear buttons, they're not needed anymore? 
   ## Clear Chromatogram File input
@@ -125,50 +132,31 @@ server <- function(input, output, session) {
     shinyjs::reset('OSWFile')
   } )
   
-  ## Observe input chromatogramfile  
-  observeEvent( input$ChromatogramFile, {
-    tryCatch(
-      expr = {
-        ## ChromatogramFile
-        shinyFileChoose(input, 'ChromatogramFile', roots = c( `Working Directory` =  "../", home = "~", root = .Platform$file.sep, `Recent Directory` = global$mostRecentDir ), defaultRoot = 'Recent Directory', defaultPath = .Platform$file.sep )
-        ### Create a reactive object to store ChromatogramFile
-        chromFile <- reactive(input$ChromatogramFile)
+  
+  ## Observe interactive set working directory button
+  workingDirectory_Input( input, output, global, values, session )
+  
+  observeEvent( input$chromType_Choice, {
+    print(sprintf("Using chromtype: %s", input$chromType_Choice))
+    
+    if ( grepl(".*mzml", input$chromType_Choice) ){
+      if ( input$WorkingDirectoryInput  ) {
+        global$chromFile <- global$foundChromFiles$mzml
         
-        values$ChromatogramFile <- renderText({  
-          global$chromFile
-        }) 
-        
-        if ( class(chromFile())[1]=='list' ){
-          ## Get root directory based on used choice, working directory, home or root
-          if ( chromFile()$root=='Working Directory' ){
-            root_node <- dirname(getwd())
-          } else if ( chromFile()$root == 'home' ) {
-            root_node <- "~"
-          } else {
-            root_node <- .Platform$file.sep
-          }
-          ## Get chromFile working directroy of user selected directory
-          global$chromFile <- lapply( chromFile()$files, function(x){ paste( root_node, file.path( paste( unlist(x), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep ) })
-          names(global$chromFile) <- lapply(global$chromFile, basename)
-          
-          ## Update global most recent directroy
-          global$mostRecentDir <- dirname(global$chromFile[[1]])
-          
-          ## Store chromatogram file run names
-          # values$chromnames <- gsub("\\.chrom\\.mzML$|\\.chrom\\.sqMass$", "", input$ChromatogramFile$name)
-          values$chromnames <- gsub("\\.chrom\\.mzML$|\\.chrom\\.sqMass$", "", names(global$chromFile))
-          ## Update Reference list
-          updateSelectizeInput( session, inputId = "Reference", choices = as.list(values$chromnames) )
-          ## Update Experiment list with first entry removed
-          updateSelectizeInput( session, inputId = "Experiment", choices = as.list(values$chromnames[-1]), selected = as.list(values$chromnames[-1])  )
-          ## Update n chroms input
-          n_runs_index <- c(seq(1, length(values$chromnames)))
-          names(n_runs_index) <-  paste( "Run ", seq(1, length((values$chromnames))), sep='')
-          run_index_map <- c(seq(1, length(values$chromnames)))
-          names(run_index_map) <- values$chromnames
-          values$run_index_map <- run_index_map
-          shiny::updateCheckboxGroupInput( session, inputId = "n_runs", choices = n_runs_index, selected = seq(1, length((values$chromnames))), inline = TRUE  )
-        }
+        ## Store chromatogram file run names
+        # values$chromnames <- gsub("\\.chrom\\.mzML$|\\.chrom\\.sqMass$", "", input$ChromatogramFile$name)
+        values$chromnames <- gsub("\\.chrom\\.mzML$|\\.chrom\\.sqMass$", "", names(global$chromFile))
+        ## Update Reference list
+        updateSelectizeInput( session, inputId = "Reference", choices = as.list(values$chromnames) )
+        ## Update Experiment list with first entry removed
+        updateSelectizeInput( session, inputId = "Experiment", choices = as.list(values$chromnames[-1]), selected = as.list(values$chromnames[-1])  )
+        ## Update n chroms input
+        n_runs_index <- c(seq(1, length(values$chromnames)))
+        names(n_runs_index) <-  paste( "Run ", seq(1, length((values$chromnames))), sep='')
+        run_index_map <- c(seq(1, length(values$chromnames)))
+        names(run_index_map) <- values$chromnames
+        values$run_index_map <- run_index_map
+        shiny::updateCheckboxGroupInput( session, inputId = "n_runs", choices = n_runs_index, selected = seq(1, length((values$chromnames))), inline = TRUE  )
         
         ## Get File Extension Type
         # fileType <- gsub( '.*\\.', '', input$ChromatogramFile$name)
@@ -178,17 +166,32 @@ server <- function(input, output, session) {
           ## Pre-Load mzML Files
           ##*******************************
           mzPntrs <- getmzPntrs( input, global  )
-          
           ## Store mzPntrs container
           values$mzPntrs <- mzPntrs
         }
-        
-      },
-      error = function(e){
-        message(sprintf("[Observe Chromatogram Input Button] There was the following error that occured during Chromatogram Input Button observation: %s\n", e$message))
       }
-    ) # End tryCatch
+      
+    } else if ( grepl(".*sqmass", input$chromType_Choice) ){
+      if ( input$WorkingDirectoryInput  ) {
+        global$chromFile <- global$foundChromFiles$sqmass
+        values$mzPntrs <- NULL
+      }
+    } else {
+      warning(sprintf("There was an issue with the chromType, selection is not a currently supported format: %s", input$chromType_Choice))
+    }
+    
+    
   })
+
+  
+  ## Observe input chromatogramfile 
+  chromFile_Input_Button( input, output, global, values, session ) 
+  
+  ## Observe LibraryFile button
+  libFile_Input_Button( input, output, global, values, session )
+  
+  ## Observe OSWFile button
+  oswFile_Input_Button(  input, output, global, values, session  )
   
   ## Observe Reference input
   observeEvent( input$Reference, {
@@ -199,210 +202,6 @@ server <- function(input, output, session) {
     ## Update Experiment list with first entry removed
     updateSelectizeInput( session, inputId = "Experiment", choices = as.list(values$Experiments_to_Align), selected = as.list(values$Experiments_to_Align) )
   })
-  
-  if ( input$WorkingDirectoryInput  ) {
-    
-  ## Observe interactive set working directory button
-  observeEvent( input$interactiveWorkingDirectory, {
-    tryCatch(
-      expr = {
-        ## Working Directory
-        shinyDirChoose(input, 'interactiveWorkingDirectory', roots = c( `Working Directory` =  "../", home = "~", root = .Platform$file.sep, `Recent Directory` = global$mostRecentDir ), defaultRoot = 'Recent Directory', defaultPath = .Platform$file.sep  )
-        ### Create a reactive object to store working directory
-        dir <- reactive(input$interactiveWorkingDirectory)
-        
-        values$WorkingDirectory <- renderText({  
-          global$datapath
-        })  
-        
-        if ( class(dir())[1]=='list' ){
-          ## Get root directory based on used choice, working directory, home or root
-          if ( dir()$root=='Working Directory' ){
-            root_node <- dirname(getwd())
-          } else if ( dir()$root == 'home' ) {
-            root_node <- "~"
-          } else {
-            root_node <- .Platform$file.sep
-          }
-          ## Get full working directroy of user selected directory
-          global$datapath <- paste( root_node, file.path( paste( unlist(dir()$path[-1]), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep )
-          
-          ## Update global most recent directroy
-          global$mostRecentDir <- global$datapath
-          
-          ## Update Working Directory Text Box
-          updateTextInput( session = session, inputId = 'WorkingDirectory', value = global$datapath  )
-          if ( "osw" %in% list.files(global$datapath) ){
-            ## Search for OSW folder
-            files_in_osw_dir <- list.files( paste(global$datapath ,'osw/',sep = .Platform$file.sep), pattern = "*osw$" ,full.names = T )
-            if ( length(files_in_osw_dir) > 1 ){
-              warning( sprintf("There were %s osw files found, taking first file!!")) # TODO: If user uses non merged osw file?
-              files_in_osw_dir <- files_in_osw_dir[1]
-            }
-            global$oswFile <- files_in_osw_dir
-          }
-          
-          
-          
-        }
-        
-      },
-      error = function(e){
-        message(sprintf("[Observe Iteractive Set Working Directory] There was the following error that occured during Interactive Set Working Directory Button observation: %s\n", e$message))
-      }
-    ) # End tryCatch
-  })
-  
-  }
-  
-  ## Observe LibraryFile button
-  observeEvent( input$LibraryFile, {
-    tryCatch(
-      expr = {
-        ## LibraryFile
-        shinyFileChoose(input, 'LibraryFile', roots = c( `Working Directory` =  "../", home = "~", root = .Platform$file.sep, `Recent Directory` = global$mostRecentDir ), defaultRoot = 'Recent Directory', defaultPath = .Platform$file.sep  )
-        ### Create a reactive object to store LibraryFile
-        libFile <- reactive(input$LibraryFile)
-        
-        values$LibraryFile <- renderText({  
-          global$libFile
-        }) 
-        
-        if ( class(libFile())[1]=='list' ){
-          ## Get root directory based on used choice, working directory, home or root
-          if ( libFile()$root=='Working Directory' ){
-            root_node <- dirname(getwd())
-          } else if ( libFile()$root == 'home' ) {
-            root_node <- "~"
-          } else {
-            root_node <- .Platform$file.sep
-          }
-          ## Get libFile working directroy of user selected directory
-          global$libFile <- lapply( libFile()$files, function(x){ paste( root_node, file.path( paste( unlist(x), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep ) })
-          names(global$libFile) <- lapply(global$libFile, basename)
-          
-          ## Update global most recent directroy
-          global$mostRecentDir <- dirname( global$libFile )
-          
-        }
-        
-      },
-      error = function(e){
-        message(sprintf("[Observe Library Input Button] There was the following error that occured during Library Input Button observation: %s\n", e$message))
-      }
-    ) # End tryCatch
-    
-  })
-  
-  ## Observe OSWFile button
-  observeEvent( input$OSWFile, {
-    
-    tryCatch(
-      expr = {
-        
-        ## OSWFile
-        shinyFileChoose(input, 'OSWFile', roots = c( `Working Directory` =  "../", home = "~", root = .Platform$file.sep, `Recent Directory` = global$mostRecentDir ), defaultRoot = 'Recent Directory', defaultPath = .Platform$file.sep  )
-        ### Create a reactive object to store OSWFile
-        oswFile <- reactive(input$OSWFile)
-        
-        values$OSWFile <- renderText({  
-          global$oswFile
-        }) 
-        
-        if ( class(oswFile())[1]=='list' ){
-          ## Get root directory based on used choice, working directory, home or root
-          if ( oswFile()$root=='Working Directory' ){
-            root_node <- dirname(getwd())
-          } else if ( oswFile()$root == 'home' ) {
-            root_node <- "~"
-          } else {
-            root_node <- .Platform$file.sep
-          }
-          ## Get oswFile working directroy of user selected directory
-          global$oswFile <- lapply( oswFile()$files, function(x){ paste( root_node, file.path( paste( unlist(x), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep ) })
-          names(global$oswFile) <- lapply(global$oswFile, basename)
-          
-          ## Update global most recent directroy
-          global$mostRecentDir <- dirname( global$oswFile )
-          
-          ## Load OSW file
-          osw_df <- mstools::getOSWData_( oswfile=global$oswFile[[1]], decoy_filter = TRUE, ms2_score = TRUE, ipf_score =  FALSE)
-          values$osw_df <- osw_df
-        }
-        
-      },
-      error = function(e){
-        message(sprintf("[Observe OSW Input Button] There was the following error that occured during OSW Input Button observation: %s\n", e$message))
-      }
-    ) # End tryCatch
-    
-  })
-  
-  ## Update Peptide List
-  observeEvent( {
-    input$LibraryFile
-    input$OSWFile
-    input$WorkingDirectory
-    input$interactiveWorkingDirectory
-  }
-  , {
-    
-    tryCatch(
-      expr = {
-        
-        ## If Library File is supplied, file modification list with peptide values
-        if( !is.null(input$LibraryFile) & input$LibraryFile!=0 ) {
-          message("A Library file was supplied, populating peptide and charge dropdown list based on library information") 
-          ## Load Librady file into data frame
-          # lib_df <- mstools::getPepLibData_( input$LibraryFile$datapath ) 
-          lib_df <- mstools::getPepLibData_( global$libFile[[1]] ) 
-          ## Store library data.frame into a re-usable  object
-          values$lib_df <- lib_df
-          ## Get list of unique modified peptides
-          uni_peptide_list <- as.list(unique( lib_df$MODIFIED_SEQUENCE )) 
-          ## Update slection list with unique peptides
-          updateSelectizeInput( session, inputId = 'Mod', choices = uni_peptide_list  )
-        } else {
-          # If an explicit path to an oswfile is supplied
-          if( !is.null(input$OSWFile) & input$OSWFile!=0 ){
-            if ( class(oswFile())[1]=='list' ){
-              message("An OSW file was supplied, populating peptide and charge dropdown list based on osw information") 
-              # osw_df <- mstools::getOSWData_( input$OSWFile$datapath, decoy_filter = TRUE, ms2_score = TRUE, ipf_score = FALSE ) 
-              osw_df <- mstools::getOSWData_( global$oswFile[[1]], decoy_filter = TRUE, ms2_score = TRUE, ipf_score = FALSE ) 
-              values$osw_df <- osw_df
-              ## Get list of unique modified peptides
-              uni_peptide_list <- as.list(unique( osw_df$FullPeptideName ) )
-              ## Update selection list with unique peptides
-              updateSelectizeInput( session, inputId = 'Mod', choices = uni_peptide_list  )
-            }
-          }  else if ( !is.null(input$WorkingDirectory) ) {
-            items_in_wd <- list.files( input$WorkingDirectory )
-            if( "osw" %in% items_in_wd ){
-              message("An OSW directory was found in supplied working directory, populating peptide and charge dropdown list based on OSW information") 
-              files_in_osw_dir <- list.files( paste(input$WorkingDirectory,'osw/',sep='/'), pattern = "*osw$" ,full.names = T )
-              if ( length(files_in_osw_dir) > 1 ){
-                warning( sprintf("There were %s osw files found, taking first file!!")) # TODO: If user uses non merged osw file?
-                files_in_osw_dir <- files_in_osw_dir[1]
-              }
-              osw_df <- mstools::getOSWData_( files_in_osw_dir, decoy_filter = TRUE, ms2_score = TRUE, ipf_score = FALSE )
-              values$osw_df <- osw_df
-              uni_peptide_list <- as.list( unique( osw_df$FullPeptideName ) )
-              ## Update slection list with unique peptides
-              updateSelectizeInput( session, inputId = 'Mod', choices = uni_peptide_list  )
-            }
-          } else {
-            warning("There was no library file, osw file or working directory supplied!.")
-          }
-          
-        }
-        
-      },
-      error = function(e){
-        message(sprintf("[Populating Peptide and Charge Drop Down List] There was the following error that occured during Populating Peptide and Charge Drop Down List: %s\n", e$message))
-      }
-    ) # End tryCatch
-    
-  } )
   
   ## Observe Peptide Selection
   observeEvent( input$Mod, {
@@ -486,7 +285,6 @@ server <- function(input, output, session) {
       if ( !(input$Align) ){
         cat("Alignment option was not selected\n")
         
-        print( input$Experiment )
         
         #Generate all plots. Max plots set to 10
         # NOTE: Should we loop over each chrom file input, or loop over each selected n runs input
@@ -515,32 +313,27 @@ server <- function(input, output, session) {
               # lib_input <- input$LibraryFile$datapath
               # osw_input <- input$OSWFile$datapath
               chrom_input <- global$chromFile[[my_i]]
-              lib_input <- global$libFile[[1]]
               osw_input <- global$oswFile[[1]]
               peptide <- input$Mod
               modification_labels <- regmatches(peptide, gregexpr("\\(.*?\\)", peptide))[[1]]
               naked_peptide <-  gsub( paste(gsub('\\)','\\\\)',gsub('\\(','\\\\(',modification_labels)), collapse = '|'), '', peptide )
+              current_run_id <- rownames(values$runs_filename_mapping )[ values$runs_filename_mapping $runs %in% gsub("\\.\\w+", "", basename(chrom_input)) ]
               
-              cat( sprintf("chrom: %s\nosw: %s\nlib: %s\n", chrom_input, osw_input, lib_input))
-              
-              out.plot.h <- mstools::XICMasterPlotFcn_( naked_peptide, 
-                                                        peptide,
-                                                        chrom_input,  lib_input, osw_input, 
+              # cat( sprintf("chrom: %s\nosw: %s\nlib: %s\n", chrom_input, osw_input, lib_input))
+              tictoc::tic("Plotting:")
+              out.plot.h <- curateXICplot( pep=naked_peptide, 
+                                                        uni_mod=peptide,
+                                                        in_sqMass=chrom_input,  df_lib=values$lib_df, in_osw=osw_input, df_osw=values$osw_df,
                                                         plotPrecursor=input$Precursor,
-                                                        plotIntersectingDetecting=input$Detecting,
-                                                        plotUniqueDetecting=F,
+                                                        plotDetecting=input$Detecting,
                                                         plotIdentifying=input$Identifying_Unique,
                                                         plotIdentifying.Unique=input$Identifying_Unique,
                                                         plotIdentifying.Shared=F,
                                                         plotIdentifying.Against=F,
                                                         doFacetZoom=F,
-                                                        # FacetFcnCall = NULL,
                                                         doPlot=T,
-                                                        # RT_padding=90000,
                                                         Charge_State=input$Charge,
-                                                        N_sample = 1,
-                                                        # idx_draw_these = c(8),
-                                                        printPlot=T,
+                                                        printPlot=F,
                                                         store_plots_subdir=NULL,
                                                         use_top_trans_pep=F,
                                                         transition_selection_list=values$transition_selection_list,
@@ -549,9 +342,11 @@ server <- function(input, output, session) {
                                                         show_all_pkgrprnk=input$ShowAllPkGrps,
                                                         # show_manual_annotation = manual_annotation_coordinates,
                                                         show_peak_info_tbl=F,
-                                                        show_legend=T )
+                                                        show_legend=T,
+                                                        mzPntrs=values$mzPntrs[[current_run_id]]
+                                               )
               
-              
+              tictoc::toc()
               # )
               # output$log <- renderText( paste(log, collapse = '\n') )
               plotly::ggplotly( (out.plot.h), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
@@ -560,6 +355,7 @@ server <- function(input, output, session) {
                                                   '<sup>',
                                                   gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', out.plot.h$labels$subtitle)),
                                                   '</sup>')))
+              
               
             }) # End renderPlotly
           }) # End local
@@ -621,8 +417,15 @@ server <- function(input, output, session) {
               global$chromFile <- list(`chludwig_K150309_007b_SW_1_6.chrom.mzML`="/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst//extdata/Synthetic_Dilution_Phosphoproteomics/mzml/chludwig_K150309_007b_SW_1_6.chrom.mzML",
                                        `chludwig_K150309_013_SW_0.chrom.mzML`="/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst//extdata/Synthetic_Dilution_Phosphoproteomics/mzml/chludwig_K150309_013_SW_0.chrom.mzML")
               global$oswFile <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/osw//merged.merged.osw"
+              global$libFile <-'/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/pqp/psgs_phospho_optimized_decoys.pqp'
+              global$datapath <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/" 
               current_experiment <- "chludwig_K150309_007b_SW_1_6"
               smooth_chromatogram<- NULL
+              in_sqMass <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst//extdata/Synthetic_Dilution_Phosphoproteomics/mzml/chludwig_K150309_013_SW_0.chrom.mzML"
+              Charge_State <- 2
+              pep <- "ANSSPTTNIDHLK"
+              uni_mod <- "ANS(UniMod:21)SPTTNIDHLK(UniMod:259)"
+              in_osw <- global$oswFile
               
               ## Spyogenes
               values <- list()
@@ -768,8 +571,8 @@ server <- function(input, output, session) {
     }) # End Observe Event
   
   
-  
-  
+  ## Return gloval varialbles for UI to use
+  outputOptions(output, "chromTypes_available", suspendWhenHidden = FALSE)
   
 } ## End Server
 

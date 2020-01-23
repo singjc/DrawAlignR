@@ -20,7 +20,7 @@ GeneralSettingsTab <- shiny::tabPanel( title = "General Settings",
                                        ## Indivdiual File Input
                                        ##*************************************
                                        
-                                       conditionalPanel( condition = "input.WorkinDirectoryInput == 0",
+                                       conditionalPanel( condition = "input.WorkingDirectoryInput == 0",
                                                          # Chromatogram Input
                                                          shiny::splitLayout(cellWidths = c("80%", "20%"),
                                                                             #Select 1 or set of mzML files,
@@ -60,14 +60,14 @@ GeneralSettingsTab <- shiny::tabPanel( title = "General Settings",
                                        ## Working Directory Input
                                        ##*************************************
                                        
-                                       conditionalPanel( condition = "input.WorkinDirectoryInput == 1",
+                                       conditionalPanel( condition = "input.WorkingDirectoryInput == 1",
                                                          # Path to directory where mzml folder and osw folder are located. By default is set to the working directory.
                                                          shiny::splitLayout(cellWidths = c("17%", "83%"),
                                                                             ## GUI directroy selector
                                                                             shinyFiles::shinyDirButton( id = "interactiveWorkingDirectory", label = "",  title = "Set Working Directory (Location of mzML and osw folders)", icon = shiny::icon("folder") ),
                                                                             ## Text box for user to manually input working data path
                                                                             shiny::textInput(inputId = "WorkingDirectory", "Set Working Directory",
-                                                                                             value = paste((gsub('............$', '', getwd())), 'extdata', sep = ''))
+                                                                                             placeholder = "Set Working Directory")
                                                          ),
                                                          shiny::tags$style(type='text/css', "#interactiveWorkingDirectory { width:100%; margin-top: 50px;}"),
                                                          shiny::tags$style(type='text/css', "#WorkingDirectory { width:100%; margin-top: 25px;}")
@@ -76,6 +76,18 @@ GeneralSettingsTab <- shiny::tabPanel( title = "General Settings",
                                        # Peptide and Charge Selection --------------------------------------------
                                        
                                        br(),
+                                       conditionalPanel( condition = "output.chromTypes_available.length > 1 && output.chromTypes_available !== ''",
+                                       shinyWidgets::awesomeRadio(
+                                         inputId = "chromType_Choice", label = NULL, 
+                                         choices = "", 
+                                         inline = TRUE, 
+                                         status = "primary",
+                                         checkbox = TRUE
+                                       ),
+                                       br(),
+                                       ),
+                                       
+                                       
                                        
                                        #Full peptide name including modifications
                                        shiny::selectizeInput('Mod', 'Peptide Name', choices = '', options = list(
