@@ -110,7 +110,7 @@ curateXICplot <- function( pep,
     }
     
     
-    if ( dim(tmp_osw_df)[1]==0 ){ MazamaCoreUtils::logger.error(crayon::red(pep, ' was not found  in osw file!!!, skipping...\n'),sep=''); return(list()) }
+    # if ( dim(tmp_osw_df)[1]==0 ){ MazamaCoreUtils::logger.error(crayon::red(pep, ' was not found  in osw file!!!, skipping...\n'),sep=''); return(list()) }
     
     
     
