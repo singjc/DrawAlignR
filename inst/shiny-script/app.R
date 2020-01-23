@@ -101,9 +101,9 @@ ui <- fluidPage(
   ) # End of sidebarLayout
 ) # End of ui
 
-source( "../../R/helpers.R" )
-source( "../../R/getmzPntrs.R")
-source( "../../R/curateXICplot.R")
+# source("../../R/helpers.R")
+# source( "../../R/getmzPntrs.R")
+# source( "../../R/curateXICplot.R")
 server <- function(input, output, session) {
   
   server_help_description_text(input, output, session)
@@ -321,7 +321,7 @@ server <- function(input, output, session) {
               
               # cat( sprintf("chrom: %s\nosw: %s\nlib: %s\n", chrom_input, osw_input, lib_input))
               tictoc::tic("Plotting:")
-              out.plot.h <- curateXICplot( pep=naked_peptide, 
+              out.plot.h <- DrawAlignR::curateXICplot( pep=naked_peptide, 
                                                         uni_mod=peptide,
                                                         in_sqMass=chrom_input,  df_lib=values$lib_df, in_osw=osw_input, df_osw=values$osw_df,
                                                         plotPrecursor=input$Precursor,

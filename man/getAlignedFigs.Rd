@@ -14,6 +14,7 @@ getAlignedFigs(
   annotatePeak = FALSE,
   annotateOrgPeak = FALSE,
   global = NULL,
+  values = NULL,
   input = NULL,
   smooth_chromatogram = NULL
 )
