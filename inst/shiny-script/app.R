@@ -140,54 +140,54 @@ server <- function(input, output, session) {
     print(sprintf("Using chromtype: %s", input$chromType_Choice))
     tryCatch(
       expr = {
-    if ( grepl(".*mzml", input$chromType_Choice) ){
-      if ( input$WorkingDirectoryInput  ) {
-        global$chromFile <- global$foundChromFiles$mzml
-        
-        ## Store chromatogram file run names
-        # values$chromnames <- gsub("\\.chrom\\.mzML$|\\.chrom\\.sqMass$", "", input$ChromatogramFile$name)
-        values$chromnames <- gsub("\\.chrom\\.mzML$|\\.chrom\\.sqMass$", "", names(global$chromFile))
-        ## Update Reference list
-        updateSelectizeInput( session, inputId = "Reference", choices = as.list(values$chromnames) )
-        ## Update Experiment list with first entry removed
-        updateSelectizeInput( session, inputId = "Experiment", choices = as.list(values$chromnames[-1]), selected = as.list(values$chromnames[-1])  )
-        ## Update n chroms input
-        n_runs_index <- c(seq(1, length(values$chromnames)))
-        names(n_runs_index) <-  paste( "Run ", seq(1, length((values$chromnames))), sep='')
-        run_index_map <- c(seq(1, length(values$chromnames)))
-        names(run_index_map) <- values$chromnames
-        values$run_index_map <- run_index_map
-        shiny::updateCheckboxGroupInput( session, inputId = "n_runs", choices = n_runs_index, selected = seq(1, length((values$chromnames))), inline = TRUE  )
-        
-        ## Get File Extension Type
-        # fileType <- gsub( '.*\\.', '', input$ChromatogramFile$name)
-        fileType <- unique(gsub( ".*\\.", "", global$chromFile))
-        if ( fileType=='mzML' | fileType=='mzML.gz'){
-          ##*******************************
-          ## Pre-Load mzML Files
-          ##*******************************
-          mzPntrs <- getmzPntrs( input, global  )
-          ## Store mzPntrs container
-          values$mzPntrs <- mzPntrs
+        if ( grepl(".*mzml", input$chromType_Choice) ){
+          if ( input$WorkingDirectoryInput  ) {
+            global$chromFile <- global$foundChromFiles$mzml
+            
+            ## Store chromatogram file run names
+            # values$chromnames <- gsub("\\.chrom\\.mzML$|\\.chrom\\.sqMass$", "", input$ChromatogramFile$name)
+            values$chromnames <- gsub("\\.chrom\\.mzML$|\\.chrom\\.sqMass$", "", names(global$chromFile))
+            ## Update Reference list
+            updateSelectizeInput( session, inputId = "Reference", choices = as.list(values$chromnames) )
+            ## Update Experiment list with first entry removed
+            updateSelectizeInput( session, inputId = "Experiment", choices = as.list(values$chromnames[-1]), selected = as.list(values$chromnames[-1])  )
+            ## Update n chroms input
+            n_runs_index <- c(seq(1, length(values$chromnames)))
+            names(n_runs_index) <-  paste( "Run ", seq(1, length((values$chromnames))), sep='')
+            run_index_map <- c(seq(1, length(values$chromnames)))
+            names(run_index_map) <- values$chromnames
+            values$run_index_map <- run_index_map
+            shiny::updateCheckboxGroupInput( session, inputId = "n_runs", choices = n_runs_index, selected = seq(1, length((values$chromnames))), inline = TRUE  )
+            
+            ## Get File Extension Type
+            # fileType <- gsub( '.*\\.', '', input$ChromatogramFile$name)
+            fileType <- unique(gsub( ".*\\.", "", global$chromFile))
+            if ( fileType=='mzML' | fileType=='mzML.gz'){
+              ##*******************************
+              ## Pre-Load mzML Files
+              ##*******************************
+              mzPntrs <- getmzPntrs( input, global  )
+              ## Store mzPntrs container
+              values$mzPntrs <- mzPntrs
+            }
+          }
+          
+        } else if ( grepl(".*sqmass", input$chromType_Choice) ){
+          if ( input$WorkingDirectoryInput  ) {
+            global$chromFile <- global$foundChromFiles$sqmass
+            values$mzPntrs <- NULL
+          }
+        } else {
+          warning(sprintf("There was an issue with the chromType, selection is not a currently supported format: %s", input$chromType_Choice))
         }
-      }
-      
-    } else if ( grepl(".*sqmass", input$chromType_Choice) ){
-      if ( input$WorkingDirectoryInput  ) {
-        global$chromFile <- global$foundChromFiles$sqmass
-        values$mzPntrs <- NULL
-      }
-    } else {
-      warning(sprintf("There was an issue with the chromType, selection is not a currently supported format: %s", input$chromType_Choice))
-    }
       },
-    error = function(e){
-      message(sprintf("[chromType_Choice:cache mzML] There was the following error that occured during Chromatogram Path Searching: %s\n", e$message))
-    }
+      error = function(e){
+        message(sprintf("[chromType_Choice:cache mzML] There was the following error that occured during Chromatogram Path Searching: %s\n", e$message))
+      }
     ) # End tryCatch
     
   })
-
+  
   
   ## Observe input chromatogramfile 
   chromFile_Input_Button( input, output, global, values, session ) 
@@ -303,63 +303,70 @@ server <- function(input, output, session) {
               
               
               #If alignment is disabled, generate standard chromatogram plot.
-              
-              if (is.null(input$ChromatogramFile)){
-                stop('A Chromgatogram file was not supplied')
+              if ( grepl(".*mzML$|.*sqMass$", global$chromFile) ){
+                stop('A Chromgatogram file was not supplied or not found')
               }
-              # else if (is.null(input$LibraryFile)){
-              #   stop("A Library File was not supplied")
-              # }
+              else if ( grepl(".*pqp$", global$libFile) ){
+                stop("A Library File was not supplied or not found")
+              } else if ( grepl(".*osw$", global$oswFile) ){
+                stop("A Merged OSW Results File was not supplied or not found")
+              }
               else if (is.null(input$Mod)){
                 stop("There was no peptide found")
               }
               
-              # chrom_input <- input$ChromatogramFile$datapath[[my_i]]
-              # lib_input <- input$LibraryFile$datapath
-              # osw_input <- input$OSWFile$datapath
-              chrom_input <- global$chromFile[[my_i]]
-              osw_input <- global$oswFile[[1]]
-              peptide <- input$Mod
-              modification_labels <- regmatches(peptide, gregexpr("\\(.*?\\)", peptide))[[1]]
-              naked_peptide <-  gsub( paste(gsub('\\)','\\\\)',gsub('\\(','\\\\(',modification_labels)), collapse = '|'), '', peptide )
-              current_run_id <- rownames(values$runs_filename_mapping )[ values$runs_filename_mapping $runs %in% gsub("\\.\\w+", "", basename(chrom_input)) ]
               
-              # cat( sprintf("chrom: %s\nosw: %s\nlib: %s\n", chrom_input, osw_input, lib_input))
-              tictoc::tic("Plotting:")
-              out.plot.h <- curateXICplot( pep=naked_peptide, 
-                                                        uni_mod=peptide,
-                                                        in_sqMass=chrom_input,  df_lib=values$lib_df, in_osw=osw_input, df_osw=values$osw_df,
-                                                        plotPrecursor=input$Precursor,
-                                                        plotDetecting=input$Detecting,
-                                                        plotIdentifying=input$Identifying_Unique,
-                                                        plotIdentifying.Unique=input$Identifying_Unique,
-                                                        plotIdentifying.Shared=F,
-                                                        plotIdentifying.Against=F,
-                                                        doFacetZoom=F,
-                                                        doPlot=T,
-                                                        Charge_State=input$Charge,
-                                                        printPlot=F,
-                                                        store_plots_subdir=NULL,
-                                                        use_top_trans_pep=F,
-                                                        transition_selection_list=values$transition_selection_list,
-                                                        show_n_transitions=input$nIdentifyingTransitions,
-                                                        show_transition_scores=input$ShowTransitionScores,
-                                                        show_all_pkgrprnk=input$ShowAllPkGrps,
-                                                        # show_manual_annotation = manual_annotation_coordinates,
-                                                        show_peak_info_tbl=F,
-                                                        show_legend=T,
-                                                        mzPntrs=values$mzPntrs[[current_run_id]]
-                                               )
-              
-              tictoc::toc()
-              # )
-              # output$log <- renderText( paste(log, collapse = '\n') )
-              plotly::ggplotly( (out.plot.h), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
-                layout(title = list(text = paste0(out.plot.h$labels$title,
-                                                  '<br>',
-                                                  '<sup>',
-                                                  gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', out.plot.h$labels$subtitle)),
-                                                  '</sup>')))
+              tryCatch(
+                expr = {
+                  chrom_input <- global$chromFile[[my_i]]
+                  osw_input <- global$oswFile[[1]]
+                  peptide <- input$Mod
+                  modification_labels <- regmatches(peptide, gregexpr("\\(.*?\\)", peptide))[[1]]
+                  naked_peptide <-  gsub( paste(gsub('\\)','\\\\)',gsub('\\(','\\\\(',modification_labels)), collapse = '|'), '', peptide )
+                  current_run_id <- rownames(values$runs_filename_mapping )[ values$runs_filename_mapping $runs %in% gsub("\\.\\w+", "", basename(chrom_input)) ]
+                  
+                  # cat( sprintf("chrom: %s\nosw: %s\nlib: %s\n", chrom_input, osw_input, lib_input))
+                  tictoc::tic("Plotting:")
+                  out.plot.h <- DrawAlignR::curateXICplot( pep=naked_peptide, 
+                                                           uni_mod=peptide,
+                                                           in_sqMass=chrom_input,  df_lib=values$lib_df, in_osw=osw_input, df_osw=values$osw_df,
+                                                           plotPrecursor=input$Precursor,
+                                                           plotDetecting=input$Detecting,
+                                                           plotIdentifying=input$Identifying_Unique,
+                                                           plotIdentifying.Unique=input$Identifying_Unique,
+                                                           plotIdentifying.Shared=F,
+                                                           plotIdentifying.Against=F,
+                                                           doFacetZoom=F,
+                                                           doPlot=T,
+                                                           Charge_State=input$Charge,
+                                                           printPlot=F,
+                                                           store_plots_subdir=NULL,
+                                                           use_top_trans_pep=F,
+                                                           transition_selection_list=values$transition_selection_list,
+                                                           show_n_transitions=input$nIdentifyingTransitions,
+                                                           show_transition_scores=input$ShowTransitionScores,
+                                                           show_all_pkgrprnk=input$ShowAllPkGrps,
+                                                           # show_manual_annotation = manual_annotation_coordinates,
+                                                           show_peak_info_tbl=F,
+                                                           show_legend=T,
+                                                           mzPntrs=values$mzPntrs[[current_run_id]]
+                  )
+                  
+                  tictoc::toc()
+                  # )
+                  # output$log <- renderText( paste(log, collapse = '\n') )
+                  plotly::ggplotly( (out.plot.h), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
+                    layout(title = list(text = paste0(out.plot.h$labels$title,
+                                                      '<br>',
+                                                      '<sup>',
+                                                      gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', out.plot.h$labels$subtitle)),
+                                                      '</sup>')))
+                  
+                }, 
+                error = function(e){
+                  message(sprintf("[MasterXICPlotting] There was the following error that occured during XIC Plotting: %s\n", e$message))
+                }
+              ) # End tryCatch
               
               
             }) # End renderPlotly
@@ -373,7 +380,6 @@ server <- function(input, output, session) {
         AlignObj_List <- list()
         for ( i in input$Experiment ) {
           print("Start Experiment Alignment")
-          print(input$Experiment)
           print(paste("Current Exp: ", i, sep=""))
           
           # Define Experiment_i
@@ -385,73 +391,7 @@ server <- function(input, output, session) {
           #Ensuring at least two runs selected, not conducting alignment against same run
           if (!(input$Reference == gsub('...........$', '', current_experiment ))){
             
-            if ( F ){
-              my_i <- 2
-              values <- list()
-              dataPath <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/"
-              analytes <- "ANS(UniMod:21)SPTTNIDHLK(UniMod:259)_2"
-              input <- list()
-              input$WorkingDirectory <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/"
-              input$Mod <- "ANS(UniMod:21)SPTTNIDHLK(UniMod:259)"
-              input$Charge <- 2
-              # input$ChromatogramFile$datapath <- '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/mzml/chludwig_K150309_013_SW_0.chrom.mzML' 
-              input$ChromatogramFile <- data.frame(name=c("chludwig_K150309_013_SW_0.chrom.mzML", "chludwig_K150309_007b_SW_1_6.chrom.mzML"),
-                                                   datapath=c('/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/mzml/chludwig_K150309_013_SW_0.chrom.mzML' ,
-                                                              '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/mzml/chludwig_K150309_007b_SW_1_6.chrom.mzML'),
-                                                   stringsAsFactors=F)
-              input$Reference <- "chludwig_K150309_013_SW_0"
-              input$Experiment <- "chludwig_K150309_007b_SW_1_6"
-              input$LibraryFile$datapath <- '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/pqp/psgs_phospho_optimized_decoys.pqp'
-              input$OSWFile$datapath <- '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/osw/merged.merged.osw'     
-              input$analyteInGroupLabel=FALSE; input$identifying=FALSE; 
-              input$oswMerged=TRUE; input$nameCutPattern="(.*)(/)(.*)";
-              input$maxFdrQuery=0.05; input$maxFdrLoess=0.01; input$analyteFDR=1; 
-              input$spanvalue=0.5;  input$normalization="mean"; input$simMeasure="dotProductMasked";
-              input$XICfilter="sgolay"; input$SgolayFiltOrd=4; input$SgolayFiltLen=9;
-              input$goFactor=0.125; input$geFactor=40; input$cosAngleThresh=0.3; input$OverlapAlignment=TRUE;
-              input$dotProdThresh=0.96; input$gapQuantile=0.5; input$hardConstrain=FALSE; 
-              input$samples4gradient=100;  input$samplingTime=3.4;  input$RSEdistFactor=3.5
-              input$Precursor <- T
-              input$Detecting <- T
-              input$Identifying_Unique <- T
-              values$transition_selection_list <- list(b=c(3), y=c(8, 9, 10))
-              input$nIdentifyingTransitions <- 6
-              input$ShowTransitionScores <- T
-              input$ShowAllPkGrps <- T
-              global <- list()
-              global$chromFile <- list(`chludwig_K150309_007b_SW_1_6.chrom.mzML`="/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst//extdata/Synthetic_Dilution_Phosphoproteomics/mzml/chludwig_K150309_007b_SW_1_6.chrom.mzML",
-                                       `chludwig_K150309_013_SW_0.chrom.mzML`="/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst//extdata/Synthetic_Dilution_Phosphoproteomics/mzml/chludwig_K150309_013_SW_0.chrom.mzML")
-              global$oswFile <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/osw//merged.merged.osw"
-              global$libFile <-'/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/pqp/psgs_phospho_optimized_decoys.pqp'
-              global$datapath <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/" 
-              current_experiment <- "chludwig_K150309_007b_SW_1_6"
-              smooth_chromatogram<- NULL
-              in_sqMass <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst//extdata/Synthetic_Dilution_Phosphoproteomics/mzml/chludwig_K150309_013_SW_0.chrom.mzML"
-              Charge_State <- 2
-              pep <- "ANSSPTTNIDHLK"
-              uni_mod <- "ANS(UniMod:21)SPTTNIDHLK(UniMod:259)"
-              in_osw <- global$oswFile
-              
-              ## Spyogenes
-              values <- list()
-              dataPAth <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/"
-              analytes <- "GEANVELTPELAFK_2"
-              input <- list()
-              input$WorkingDirectory <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/"
-              input$Mod <- "GEANVELTPELAFK"
-              input$Charge <- 2
-              # input$ChromatogramFile$datapath <- '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/mzml/chludwig_K150309_013_SW_0.chrom.mzML' 
-              input$ChromatogramFile <- data.frame(name=c("hroest_K120808_Strep10%PlasmaBiolRepl1_R03_SW_filt.chrom.mzML", "hroest_K120809_Strep10%PlasmaBiolRepl2_R04_SW_filt.chrom.mzML"),
-                                                   datapath=c('/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/mzml/hroest_K120808_Strep10%PlasmaBiolRepl1_R03_SW_filt.chrom.mzML' ,
-                                                              '/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/mzml/hroest_K120809_Strep10%PlasmaBiolRepl2_R04_SW_filt.chrom.mzML'),
-                                                   stringsAsFactors=F)
-              input$Experiment <- "hroest_K120808_Strep10%PlasmaBiolRepl1_R03_SW_filt"
-              input$Reference <- "hroest_K120809_Strep10%PlasmaBiolRepl2_R04_SW_filt"
-              input$LibraryFile$datapath <- NULL
-              input$OSWFile$datapath <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Spyogenes/osw/merged.osw"
-              
-              
-            }
+            
             tryCatch(
               expr = {  
                 
@@ -477,13 +417,14 @@ server <- function(input, output, session) {
                 tictoc::toc()
                 cat("\n")
                 
+                AlignObj_List[[current_experiment]] <- AlignObjOutput
+                
               }, 
               error = function(e){
                 message(sprintf("[Alignment] There was the following error that occured during Alignment: %s\n", e$message))
-                print(e)
               }
             ) # End tryCatch
-            AlignObj_List[[current_experiment]] <- AlignObjOutput
+            
           }
         }
         
@@ -510,7 +451,6 @@ server <- function(input, output, session) {
                 cat( sprintf( "Names in AlignOPObjs: %s\n", names(AlignObj_List) ) )
                 ## Generate Plot
                 k <- DrawAlignR::plotAlignedAnalytes(AlignObjOutput = AlignObj_List[[current_experiment]], DrawAlignR = T, annotatePeak = T, annotateOrgPeak = input$OriginalRTAnnotation, global = global, input = input)
-                print( names(k) )
                 # values$plot_i <- 1
                 ## Plot Reference
                 
@@ -557,7 +497,6 @@ server <- function(input, output, session) {
               }, 
               error = function(e){
                 message(sprintf("[Plotting Alignment] There was the following error that occured during Plotting Alignment: %s\n", e$message))
-                print(e)
               }
             ) # End tryCatch
           })

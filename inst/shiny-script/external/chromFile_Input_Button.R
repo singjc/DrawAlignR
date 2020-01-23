@@ -4,10 +4,9 @@ chromFile_Input_Button <- function( input, output, global, values, session ){
     tryCatch(
       expr = {
         ## ChromatogramFile
-        shinyFileChoose(input, 'ChromatogramFile', roots = c( `Working Directory` =  "../", home = "~", root = .Platform$file.sep, `Recent Directory` = global$mostRecentDir ), defaultRoot = 'Recent Directory', defaultPath = .Platform$file.sep )
+        shinyFileChoose(input, 'ChromatogramFile', roots = c( `Working Directory` =  "../", home = normalizePath("~"), root = .Platform$file.sep, `Recent Directory` = global$mostRecentDir ), defaultRoot = 'Recent Directory', defaultPath = .Platform$file.sep )
         ### Create a reactive object to store ChromatogramFile
         chromFile <- reactive(input$ChromatogramFile)
-        
         values$ChromatogramFile <- renderText({  
           global$chromFile
         }) 
@@ -22,8 +21,10 @@ chromFile_Input_Button <- function( input, output, global, values, session ){
             root_node <- .Platform$file.sep
           }
           ## Get chromFile working directroy of user selected directory
-          global$chromFile <- lapply( chromFile()$files, function(x){ paste( root_node, file.path( paste( unlist(x), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep ) })
+          global$chromFile <- lapply( chromFile()$files, function(x){ normalizePath( paste( root_node, file.path( paste( unlist(x), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep ) ) }) 
+          
           names(global$chromFile) <- lapply(global$chromFile, function(file_path){gsub("\\..*", "", basename(file_path))} )
+          print( global$chromFile)
           
           ## Update global most recent directroy
           global$mostRecentDir <- dirname( dirname(global$chromFile[[1]]) )

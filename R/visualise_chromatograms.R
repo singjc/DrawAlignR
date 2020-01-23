@@ -382,7 +382,6 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
     
     XICs.eXp[[1]][['time']][ AlignedIndices[, 'indexAligned.eXp'] ]
     XICs.ref[[1]][["time"]][ AlignedIndices[, 'indexAligned.ref'] ]
-    print(refCorresponding_rt_osw)
     if ( dim(refCorresponding_rt_osw)[1]>0 ){
     peXpA <- peXpA +
       geom_rect(data = data.frame(xmin = refCorresponding_rt_osw$leftWidth,

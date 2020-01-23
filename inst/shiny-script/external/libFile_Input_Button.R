@@ -3,7 +3,7 @@ libFile_Input_Button <- function( input, output, global, values, session ) {
     tryCatch(
       expr = {
         ## LibraryFile
-        shinyFileChoose(input, 'LibraryFile', roots = c( `Working Directory` =  "../", home = "~", root = .Platform$file.sep, `Recent Directory` = global$mostRecentDir ), defaultRoot = 'Recent Directory', defaultPath = .Platform$file.sep  )
+        shinyFileChoose(input, 'LibraryFile', roots = c( `Working Directory` =  "../", home = normalizePath("~"), root = .Platform$file.sep, `Recent Directory` = global$mostRecentDir ), defaultRoot = 'Recent Directory', defaultPath = .Platform$file.sep  )
         ### Create a reactive object to store LibraryFile
         libFile <- reactive(input$LibraryFile)
         
@@ -20,12 +20,13 @@ libFile_Input_Button <- function( input, output, global, values, session ) {
             root_node <- .Platform$file.sep
           }
           ## Get libFile working directroy of user selected directory
-          global$libFile <- lapply( libFile()$files, function(x){ paste( root_node, file.path( paste( unlist(x), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep ) })
+          global$libFile <- lapply( libFile()$files, function(x){ paste( root_node, file.path( paste( unlist(x), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep ) }) 
           names(global$libFile) <- lapply(global$libFile, basename)
           ## Update global most recent directroy
           global$mostRecentDir <- dirname( dirname( global$libFile[[1]] ) )
           ## Read in library and Cache Library onto disk
           tictoc::tic("Reading and Cacheing Library File")
+          print(global$libFile)
           lib_df <- mstools::getPepLibData_( global$libFile[[1]] )
           values$lib_df <- lib_df
           tictoc::toc()
