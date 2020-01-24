@@ -19,6 +19,7 @@ libFile_Input_Button <- function( input, output, global, values, session ) {
           } else {
             root_node <- .Platform$file.sep
           }
+          print(root_node)
           ## Get libFile working directroy of user selected directory
           global$libFile <- lapply( libFile()$files, function(x){ paste( root_node, file.path( paste( unlist(x), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep ) }) 
           names(global$libFile) <- lapply(global$libFile, basename)
@@ -30,6 +31,7 @@ libFile_Input_Button <- function( input, output, global, values, session ) {
           lib_df <- mstools::getPepLibData_( global$libFile[[1]] )
           values$lib_df <- lib_df
           tictoc::toc()
+          print(lib_df)
           ## Get list of unique modified peptides
           uni_peptide_list <- as.list(unique( lib_df$MODIFIED_SEQUENCE )) 
           ## Update slection list with unique peptides

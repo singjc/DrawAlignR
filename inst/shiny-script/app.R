@@ -303,12 +303,12 @@ server <- function(input, output, session) {
               
               
               #If alignment is disabled, generate standard chromatogram plot.
-              if ( grepl(".*mzML$|.*sqMass$", global$chromFile) ){
+              if ( !grepl(".*mzML$|.*sqMass$", global$chromFile) ){
                 stop('A Chromgatogram file was not supplied or not found')
               }
-              else if ( grepl(".*pqp$", global$libFile) ){
+              else if ( !grepl(".*pqp$", global$libFile) ){
                 stop("A Library File was not supplied or not found")
-              } else if ( grepl(".*osw$", global$oswFile) ){
+              } else if ( !grepl(".*osw$", global$oswFile) ){
                 stop("A Merged OSW Results File was not supplied or not found")
               }
               else if (is.null(input$Mod)){
