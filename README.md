@@ -24,10 +24,6 @@ Illustration of general overview:
 
 See Our Tutorial Vignette: [Tutorial_DrawAlignR.md](https://github.com/Roestlab/DrawAlignR/tree/master/vignettes/Tutorial_DrawAlignR.md)
 
-### Example Alignment of A Phosphorylation Dilution Series Dataset
-
-![](./inst/extdata/DrawAlignR_Alignment_Example.png)
-
 ## Example Dataset Availability
 
 We have example datasets hosted on PeptideAtalas [PASS01520](https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View?identifier=PASS01520)

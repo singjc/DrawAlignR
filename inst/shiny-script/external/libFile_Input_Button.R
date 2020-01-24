@@ -15,11 +15,12 @@ libFile_Input_Button <- function( input, output, global, values, session ) {
           if ( libFile()$root=='Working Directory' ){
             root_node <- dirname(getwd())
           } else if ( libFile()$root == 'home' ) {
-            root_node <- "~"
+            root_node <- path.expand("~")
+          } else if ( libFile()$root=="Recent Directory" ) {
+            root_node <- global$mostRecentDir
           } else {
             root_node <- .Platform$file.sep
           }
-          print(root_node)
           ## Get libFile working directroy of user selected directory
           global$libFile <- lapply( libFile()$files, function(x){ paste( root_node, file.path( paste( unlist(x), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep ) }) 
           names(global$libFile) <- lapply(global$libFile, basename)
@@ -27,11 +28,9 @@ libFile_Input_Button <- function( input, output, global, values, session ) {
           global$mostRecentDir <- dirname( dirname( global$libFile[[1]] ) )
           ## Read in library and Cache Library onto disk
           tictoc::tic("Reading and Cacheing Library File")
-          print(global$libFile)
           lib_df <- mstools::getPepLibData_( global$libFile[[1]] )
           values$lib_df <- lib_df
           tictoc::toc()
-          print(lib_df)
           ## Get list of unique modified peptides
           uni_peptide_list <- as.list(unique( lib_df$MODIFIED_SEQUENCE )) 
           ## Update slection list with unique peptides

@@ -11,7 +11,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
         ##*********************************
         tryCatch(
           expr = {
-            shinyDirChoose(input, 'interactiveWorkingDirectory', roots = c( `Working Directory` =  "../", home = path.expand("~"), root = .Platform$file.sep, `Recent Directory` = global$mostRecentDir ), defaultRoot = 'Recent Directory', defaultPath = .Platform$file.sep  )
+            shinyDirChoose(input, 'interactiveWorkingDirectory', roots = c( `Working Directory` =  "../", home = path.expand("~"), root = .Platform$file.sep, `Recent Directory` = global$mostRecentDir ), defaultRoot = 'Working Directory', defaultPath = .Platform$file.sep  )
             if ( input$WorkingDirectory!="" ) {
               global$datapath <- normalizePath( input$WorkingDirectory )
               ## Get mapping of runs to filename
@@ -75,7 +75,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                 global$oswFile <- files_in_osw_dir
                 
                 ## Load OSW file
-                use_ipf_score <- Score_IPF_Present( global$oswFile[[1]] )
+                use_ipf_score <- DrawAlignR:::Score_IPF_Present( global$oswFile[[1]] )
                 tictoc::tic("Reading and Cacheing OSW File")
                 osw_df <- mstools::getOSWData_( oswfile=global$oswFile[[1]], decoy_filter = TRUE, ms2_score = TRUE, ipf_score =  use_ipf_score)
                 m_score_filter_var <- ifelse( length(grep( "m_score|mss_m_score", colnames(osw_df), value = T))==2, "m_score", "ms2_m_score" )

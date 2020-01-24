@@ -101,9 +101,9 @@ ui <- fluidPage(
   ) # End of sidebarLayout
 ) # End of ui
 
-source("../../R/helpers.R")
-source( "../../R/getmzPntrs.R")
-source( "../../R/curateXICplot.R")
+# source("../../R/helpers.R")
+# source( "../../R/getmzPntrs.R")
+# source( "../../R/curateXICplot.R")
 server <- function(input, output, session) {
   
   server_help_description_text(input, output, session)
@@ -132,10 +132,26 @@ server <- function(input, output, session) {
     shinyjs::reset('OSWFile')
   } )
   
+  ## Observe Working Directory Input material switch.
+  #   User may switch between using a working directory or
+  #   supply each individual file
+  observeEvent( input$WorkingDirectoryInput, {
+    if ( input$WorkingDirectoryInput ){
+      ## Observe interactive set working directory button
+      workingDirectory_Input( input, output, global, values, session )
+    } else {
+      ## Observe input chromatogramfile 
+      chromFile_Input_Button( input, output, global, values, session ) 
+      
+      ## Observe LibraryFile button
+      libFile_Input_Button( input, output, global, values, session )
+      
+      ## Observe OSWFile button
+      oswFile_Input_Button(  input, output, global, values, session  )
+    }
+  })
   
-  ## Observe interactive set working directory button
-  workingDirectory_Input( input, output, global, values, session )
-  
+  ## If multiple chromatogram format types are found, check to see which fortmat user wants to use  
   observeEvent( input$chromType_Choice, {
     print(sprintf("Using chromtype: %s", input$chromType_Choice))
     tryCatch(
@@ -187,16 +203,6 @@ server <- function(input, output, session) {
     ) # End tryCatch
     
   })
-  
-  
-  ## Observe input chromatogramfile 
-  chromFile_Input_Button( input, output, global, values, session ) 
-  
-  ## Observe LibraryFile button
-  libFile_Input_Button( input, output, global, values, session )
-  
-  ## Observe OSWFile button
-  oswFile_Input_Button(  input, output, global, values, session  )
   
   ## Observe Reference input
   observeEvent( input$Reference, {
@@ -251,13 +257,13 @@ server <- function(input, output, session) {
         expr = {
           
           if ( input$yIdent!="" ){
-            values$transition_selection_list$y <- c(text2numericInput(input$yIdent))
+            values$transition_selection_list$y <- c(DrawAlignR:::text2numericInput(input$yIdent))
           } else {
             values$transition_selection_list$y <- NULL
           }
           
           if ( input$bIdent!="" ){
-            values$transition_selection_list$b <- c(text2numericInput(input$bIdent))
+            values$transition_selection_list$b <- c(DrawAlignR:::text2numericInput(input$bIdent))
           } else {
             values$transition_selection_list$b <- NULL
           }

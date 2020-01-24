@@ -10,13 +10,14 @@ chromFile_Input_Button <- function( input, output, global, values, session ){
         values$ChromatogramFile <- renderText({  
           global$chromFile
         }) 
-        
         if ( class(chromFile())[1]=='list' ){
           ## Get root directory based on used choice, working directory, home or root
           if ( chromFile()$root=='Working Directory' ){
             root_node <- dirname(getwd())
           } else if ( chromFile()$root == 'home' ) {
-            root_node <- "~"
+            root_node <- path.expand("~")
+          } else if ( chromFile()$root=="Recent Directory" ) {
+            root_node <- global$mostRecentDir
           } else {
             root_node <- .Platform$file.sep
           }
@@ -24,7 +25,6 @@ chromFile_Input_Button <- function( input, output, global, values, session ){
           global$chromFile <- lapply( chromFile()$files, function(x){ normalizePath( paste( root_node, file.path( paste( unlist(x), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep ) ) }) 
           
           names(global$chromFile) <- lapply(global$chromFile, function(file_path){gsub("\\..*", "", basename(file_path))} )
-          print( global$chromFile)
           
           ## Update global most recent directroy
           global$mostRecentDir <- dirname( dirname(global$chromFile[[1]]) )
@@ -48,7 +48,6 @@ chromFile_Input_Button <- function( input, output, global, values, session ){
         ## Get File Extension Type
         # fileType <- gsub( '.*\\.', '', input$ChromatogramFile$name)
         fileType <- unique(gsub( ".*\\.", "", global$chromFile))
-        print(fileType)
         if ( fileType=='mzML' | fileType=='mzML.gz'){
           ##*******************************
           ## Pre-Load mzML Files

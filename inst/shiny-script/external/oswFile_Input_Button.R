@@ -5,7 +5,7 @@ oswFile_Input_Button <- function(  input, output, global, values, session  ) {
       expr = {
         
         ## OSWFile
-        shinyFileChoose(input, 'OSWFile', roots = c( `Working Directory` =  "../", home = normalizePath("~"), root = .Platform$file.sep, `Recent Directory` = global$mostRecentDir ), defaultRoot = 'Recent Directory', defaultPath = .Platform$file.sep  )
+        shinyFileChoose(input, 'OSWFile', roots = c( `Working Directory` =  "../", home = normalizePath("~"), root = .Platform$file.sep, `Recent Directory` = global$mostRecentDir  ), defaultRoot = 'Recent Directory', defaultPath = .Platform$file.sep  )
         ### Create a reactive object to store OSWFile
         oswFile <- reactive(input$OSWFile)
         
@@ -18,7 +18,9 @@ oswFile_Input_Button <- function(  input, output, global, values, session  ) {
           if ( oswFile()$root=='Working Directory' ){
             root_node <- dirname(getwd())
           } else if ( oswFile()$root == 'home' ) {
-            root_node <- "~"
+            root_node <- path.expand("~")
+          } else if ( oswFile()$root=="Recent Directory" ) {
+            root_node <- global$mostRecentDir
           } else {
             root_node <- .Platform$file.sep
           }
@@ -30,7 +32,7 @@ oswFile_Input_Button <- function(  input, output, global, values, session  ) {
           ## Update global most recent directroy
           global$mostRecentDir <- dirname( dirname( global$oswFile[[1]] ) )
           ## Load OSW file
-          use_ipf_score <- Score_IPF_Present( global$oswFile[[1]] )
+          use_ipf_score <- DrawAlignR:::Score_IPF_Present( global$oswFile[[1]] )
           tictoc::tic("Reading and Cacheing OSW File")
           osw_df <- mstools::getOSWData_( oswfile=global$oswFile[[1]], decoy_filter = TRUE, ms2_score = TRUE, ipf_score =  use_ipf_score)
           m_score_filter_var <- ifelse( length(grep( "m_score|mss_m_score", colnames(osw_df), value = T))==2, "m_score", "ms2_m_score" )
