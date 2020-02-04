@@ -130,10 +130,10 @@ getOswFiles <- function(dataPath, filenames, maxFdrQuery = 0.05, analyteFDR = 0.
       }
     }
     
-    DIAlignR:::chromatogramIdAsInteger(chromHead)
+    DIAlignR::chromatogramIdAsInteger(chromHead)
     # Merge chromatogram indices with transition indices and save them.
     # Following function merges analytesInfo dataframe with the chromatogram Header.
-    DIAlignR:::mergeOswAnalytes_ChromHeader(oswAnalytes, chromHead, analyteFDR, runType)
+    DIAlignR::mergeOswAnalytes_ChromHeader(oswAnalytes, chromHead, analyteFDR, runType)
     oswFiles[[i]] <- oswAnalytes
     message("Fetched chromatogram indices from ", filenames$filename[i])
   }

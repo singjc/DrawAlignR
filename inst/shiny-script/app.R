@@ -20,9 +20,6 @@
 #' @source "uiTabs.R"
 #' @source "getmzPntrs.R"
 
-#Setting max file size
-options(shiny.maxRequestSize=1000000*1024^2)
-
 ## This should be done only if the user does not have the package, otherwise it will install everytime the app is run, and will be very slow for installing large packages.
 # if (!requireNamespace("BiocManager", quietly = TRUE))
 #   install.packages("BiocManager")
@@ -101,9 +98,7 @@ ui <- fluidPage(
   ) # End of sidebarLayout
 ) # End of ui
 
-# source("../../R/helpers.R")
-# source( "../../R/getmzPntrs.R")
-# source( "../../R/curateXICplot.R")
+
 server <- function(input, output, session) {
   
   server_help_description_text(input, output, session)
@@ -117,23 +112,6 @@ server <- function(input, output, session) {
   link_zoom_ranges  <- reactiveValues(x = NULL, y = NULL)
   brush <- NULL
   makeReactiveBinding("brush")
-  
-  # TODO: Remove these clear buttons, they're not needed anymore? 
-  ## Clear Chromatogram File input
-  observeEvent( input$resetChromatogramFile, {
-    shinyjs::reset('ChromatogramFile')
-    
-  } )
-  
-  ## Clear Library File input
-  observeEvent( input$resetLibraryFile, {
-    shinyjs::reset('LibraryFile')
-  } )
-  
-  ## Clear OSW File input
-  observeEvent( input$resetOSWFile, {
-    shinyjs::reset('OSWFile')
-  } )
   
   ## Observe Working Directory Input material switch.
   #   User may switch between using a working directory or
@@ -393,7 +371,7 @@ server <- function(input, output, session) {
                 )
                 
                 tictoc::toc()
-                # )
+                
                 # output$log <- renderText( paste(log, collapse = '\n') )
                 ### Old method using plotly
                 # plotly::ggplotly( (out.plot.h), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
