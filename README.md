@@ -7,10 +7,13 @@ An R package for the visualization of aligned ms2 chromatograms.
 To install this package, follow these commands:
 
 ``` r
-require("devtools")
-devtools::install_github("Roestlab/mstools")
-devtools::install_github("shubham1637/DIAlignR")
-devtools::install_github("Roestlab/DrawAlignR")
+## Check if devtools is available, else install it and load it
+if(!require("devtools")) install.packages("devtools")
+## Use install_github to install necessary packages to run DrawAlignR
+install_github("Roestlab/mstools")
+install_github("shubham1637/DIAlignR")
+install_github("Roestlab/DrawAlignR")
+## Load DrawAlignR
 library(DrawAlignR)
 ```
 

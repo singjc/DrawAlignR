@@ -5,6 +5,8 @@
 #' @import shiny
 #' @import shinyjs
 #' @import shinyFiles 
+#' @import shinyWidgets
+#' @import shinyBS
 #' @import plotly
 #' @import DIAlignR
 #' @import mstools
