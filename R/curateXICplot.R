@@ -81,7 +81,7 @@ curateXICplot <- function( pep,
   
   ## Check if logging has been initialized
   if( MazamaCoreUtils::logger.isInitialized() ){
-    mstools:::log_setup()
+    mstools::log_setup()
   }
   
   tictoc::tic( paste('XIC plotting for ', pep, ' peptides took: ', sep=' '))

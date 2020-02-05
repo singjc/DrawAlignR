@@ -26,33 +26,33 @@ GeneralSettingsTab <- shiny::tabPanel( title = "General Settings",
                                                                             #Select 1 or set of mzML files,
                                                                             # fileInput(inputId = "ChromatogramFile", "Choose a Chromatogram File(s)", multiple = TRUE, accept = c(".mzML", ".sqMass"), buttonLabel = icon("folder")  ),
                                                                             shinyFiles::shinyFilesButton( id = "ChromatogramFile", label = "Chromatogram Path(s)", title = "Choose a Chromatogram File(s)", multiple = TRUE, icon = shiny::icon("folder") ),
-                                                                            ## Reset
-                                                                            shiny::actionButton(inputId = "resetChromatogramFile", label = 'X')
+                                                                            ## help button
+                                                                            bsButton("ChromatogramFile_help", label = "?", size = "default")
                                                          ),
-                                                         shiny::tags$style(type='text/css', "#ChromatogramFile { width:100%; margin-top: 25px;}"),
-                                                         shiny::tags$style(type='text/css', "#resetChromatogramFile { width:100%; margin-top: 25px;}"),
+                                                         shiny::tags$style(type='text/css', "#ChromatogramFile { width:100%; margin-top: 0px;}"),
+                                                         shiny::tags$style(type='text/css', "#ChromatogramFile_help { width:100%; margin-top: 0px;}"),
                                                          
                                                          # Library File Input
                                                          shiny::splitLayout(cellWidths = c("80%", "20%"),
                                                                             #Select 1 or set of mzML files,
                                                                             # fileInput(inputId = "LibraryFile", "Choose a Library File", multiple = FALSE, accept = c(".pqp"), buttonLabel = icon("folder") ),
                                                                             shinyFiles::shinyFilesButton( id = "LibraryFile", label = "PQP Path", title = "Choose a Library File", multiple = FALSE, icon = shiny::icon("folder") ),
-                                                                            ## Reset
-                                                                            shiny::actionButton(inputId = "resetLibraryFile", label = 'X')
+                                                                            ## help button
+                                                                            bsButton("LibraryFile_help", label = "?", size = "default")
                                                          ),
-                                                         shiny::tags$style(type='text/css', "#LibraryFile { width:100%; margin-top: 25px;}"),
-                                                         shiny::tags$style(type='text/css', "#resetLibraryFile { width:100%; margin-top: 25px;}"),
+                                                         shiny::tags$style(type='text/css', "#LibraryFile { width:100%; margin-top: 0px;}"),
+                                                         shiny::tags$style(type='text/css', "#LibraryFile_help { width:100%; margin-top: 0px;}"),
                                                          
                                                          # OSW File Input
                                                          shiny::splitLayout(cellWidths = c("80%", "20%"),
                                                                             #Select 1 or set of mzML files,
                                                                             # fileInput(inputId = "OSWFile", "Choose a OSW File", multiple = FALSE, accept = c(".osw"), buttonLabel = icon("folder") ),
                                                                             shinyFiles::shinyFilesButton( id = "OSWFile", label = "OSW Path", title = "Choose a OSW File", multiple = TRUE, icon = shiny::icon("folder") ),
-                                                                            ## Reset
-                                                                            shiny::actionButton(inputId = "resetOSWFile", label = 'X')
+                                                                            ## help button
+                                                                            bsButton("OSWFile_help", label = "?", size = "default")
                                                          ),
-                                                         shiny::tags$style(type='text/css', "#OSWFile { width:100%; margin-top: 25px;}"),
-                                                         shiny::tags$style(type='text/css', "#resetOSWFile { width:100%; margin-top: 25px;}")
+                                                         shiny::tags$style(type='text/css', "#OSWFile { width:100%; margin-top: 0px;}"),
+                                                         shiny::tags$style(type='text/css', "#OSWFile_help { width:100%; margin-top: 0px;}")
                                                          
                                        ),
                                        

@@ -20,9 +20,6 @@
 #' @source "uiTabs.R"
 #' @source "getmzPntrs.R"
 
-#Setting max file size
-options(shiny.maxRequestSize=1000000*1024^2)
-
 ## This should be done only if the user does not have the package, otherwise it will install everytime the app is run, and will be very slow for installing large packages.
 # if (!requireNamespace("BiocManager", quietly = TRUE))
 #   install.packages("BiocManager")
@@ -101,9 +98,7 @@ ui <- fluidPage(
   ) # End of sidebarLayout
 ) # End of ui
 
-# source("../../R/helpers.R")
-# source( "../../R/getmzPntrs.R")
-# source( "../../R/curateXICplot.R")
+
 server <- function(input, output, session) {
   
   server_help_description_text(input, output, session)
@@ -114,23 +109,9 @@ server <- function(input, output, session) {
   values$lib_df <- NULL
   global <- reactiveValues(datapath = getwd(), chromFile = getwd(), libFile = getwd(), oswFile = getwd(), mostRecentDir = getwd(), foundChromFiles = list(mzml=list(), sqmass=list()), chromTypes_available = "" )
   output$chromTypes_available <- renderText({ '' })
-  
-  # TODO: Remove these clear buttons, they're not needed anymore? 
-  ## Clear Chromatogram File input
-  observeEvent( input$resetChromatogramFile, {
-    shinyjs::reset('ChromatogramFile')
-    
-  } )
-  
-  ## Clear Library File input
-  observeEvent( input$resetLibraryFile, {
-    shinyjs::reset('LibraryFile')
-  } )
-  
-  ## Clear OSW File input
-  observeEvent( input$resetOSWFile, {
-    shinyjs::reset('OSWFile')
-  } )
+  link_zoom_ranges  <- reactiveValues(x = NULL, y = NULL)
+  brush <- NULL
+  makeReactiveBinding("brush")
   
   ## Observe Working Directory Input material switch.
   #   User may switch between using a working directory or
@@ -282,10 +263,41 @@ server <- function(input, output, session) {
       run_index <- input$n_runs[[i]]
       plotname <- paste("plot_run_", run_index, sep="")
       print(paste("Creating plot ", plotname, sep=""))
-      plotlyOutput(plotname)
+      plotOutput(plotname,
+                 dblclick = "link_zoom_dblclick",
+                 brush = brushOpts(
+                   id = "link_zoom_brush",
+                   resetOnNew = TRUE
+                 ),
+                 hover = hoverOpts(
+                   id = paste0(plotname, "_hover")
+                 )
+      ) # End of plotlyOutput
     })
     do.call(tagList, plot_output_list)
     
+  })
+  
+  # When a double-click happens, check if there's a brush on the plot.
+  # If so, zoom to the brush bounds; if not, reset the zoom.
+  observeEvent(input$link_zoom_brush, {
+    brush <- input$link_zoom_brush
+    if (!is.null(brush)) {
+      link_zoom_ranges$x <- c(brush$xmin, brush$xmax)
+      link_zoom_ranges$y <- c(brush$ymin, brush$ymax)
+      
+    } else {
+      link_zoom_ranges$x <- NULL
+      link_zoom_ranges$y <- NULL
+    }
+  })
+  
+  observeEvent(input$link_zoom_dblclick, {
+    print("Resetting brush")
+    session$resetBrush("link_zoom_brush")
+    brush <<- NULL
+    link_zoom_ranges$x <- NULL
+    link_zoom_ranges$y <- NULL
   })
   
   observeEvent( 
@@ -305,77 +317,88 @@ server <- function(input, output, session) {
             run_index <- input$n_runs[[i]]
             plotname <- paste("plot_run_", run_index, sep="")
             
-            output[[plotname]] <- renderPlotly({
-              
-              
-              #If alignment is disabled, generate standard chromatogram plot.
-              if ( !grepl(".*mzML$|.*sqMass$", global$chromFile) ){
-                stop('A Chromgatogram file was not supplied or not found')
-              }
-              else if ( !grepl(".*pqp$", global$libFile) ){
-                stop("A Library File was not supplied or not found")
-              } else if ( !grepl(".*osw$", global$oswFile) ){
-                stop("A Merged OSW Results File was not supplied or not found")
-              }
-              else if (is.null(input$Mod)){
-                stop("There was no peptide found")
-              }
-              
-              
-              tryCatch(
-                expr = {
-                  chrom_input <- global$chromFile[[my_i]]
-                  osw_input <- global$oswFile[[1]]
-                  peptide <- input$Mod
-                  modification_labels <- regmatches(peptide, gregexpr("\\(.*?\\)", peptide))[[1]]
-                  naked_peptide <-  gsub( paste(gsub('\\)','\\\\)',gsub('\\(','\\\\(',modification_labels)), collapse = '|'), '', peptide )
-                  current_run_id <- rownames(values$runs_filename_mapping )[ values$runs_filename_mapping $runs %in% gsub("\\.\\w+", "", basename(chrom_input)) ]
+            
+            
+            
+            #If alignment is disabled, generate standard chromatogram plot.
+            if ( !grepl(".*mzML$|.*sqMass$", global$chromFile) ){
+              warning('A Chromgatogram file was not supplied or not found')
+            }
+            else if ( !grepl(".*pqp$", global$libFile) ){
+              warning("A Library File was not supplied or not found")
+            } else if ( !grepl(".*osw$", global$oswFile) ){
+              warning("A Merged OSW Results File was not supplied or not found")
+            }
+            else if (is.null(input$Mod)){
+              warning("There was no peptide found")
+            }
+            
+            
+            tryCatch(
+              expr = {
+                chrom_input <- global$chromFile[[my_i]]
+                osw_input <- global$oswFile[[1]]
+                peptide <- input$Mod
+                modification_labels <- regmatches(peptide, gregexpr("\\(.*?\\)", peptide))[[1]]
+                naked_peptide <-  gsub( paste(gsub('\\)','\\\\)',gsub('\\(','\\\\(',modification_labels)), collapse = '|'), '', peptide )
+                current_run_id <- rownames(values$runs_filename_mapping )[ values$runs_filename_mapping $runs %in% gsub("\\.\\w+", "", basename(chrom_input)) ]
+                
+                # cat( sprintf("chrom: %s\nosw: %s\nlib: %s\n", chrom_input, osw_input, lib_input))
+                tictoc::tic("Plotting:")
+                out.plot.h <- DrawAlignR::curateXICplot( pep=naked_peptide, 
+                                                         uni_mod=peptide,
+                                                         in_sqMass=chrom_input,  df_lib=values$lib_df, in_osw=osw_input, df_osw=values$osw_df,
+                                                         plotPrecursor=input$Precursor,
+                                                         plotDetecting=input$Detecting,
+                                                         plotIdentifying=input$Identifying_Unique,
+                                                         plotIdentifying.Unique=input$Identifying_Unique,
+                                                         plotIdentifying.Shared=F,
+                                                         plotIdentifying.Against=F,
+                                                         doFacetZoom=F,
+                                                         doPlot=T,
+                                                         Charge_State=input$Charge,
+                                                         printPlot=F,
+                                                         store_plots_subdir=NULL,
+                                                         use_top_trans_pep=F,
+                                                         transition_selection_list=values$transition_selection_list,
+                                                         show_n_transitions=input$nIdentifyingTransitions,
+                                                         show_transition_scores=input$ShowTransitionScores,
+                                                         show_all_pkgrprnk=input$ShowAllPkGrps,
+                                                         # show_manual_annotation = manual_annotation_coordinates,
+                                                         show_peak_info_tbl=F,
+                                                         show_legend=T,
+                                                         mzPntrs=values$mzPntrs[[current_run_id]]
+                )
+                
+                tictoc::toc()
+                
+                # output$log <- renderText( paste(log, collapse = '\n') )
+                ### Old method using plotly
+                # plotly::ggplotly( (out.plot.h), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
+                #   layout(title = list(text = paste0(out.plot.h$labels$title,
+                #                                     '<br>',
+                #                                     '<sup>',
+                #                                     gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', out.plot.h$labels$subtitle)),
+                #                                     '</sup>')))
+                
+                output[[plotname]] <- renderPlot({
+
+                  out.plot.h  +
+                    ggplot2::coord_cartesian(xlim = link_zoom_ranges$x, ylim = link_zoom_ranges$y, expand = FALSE)
                   
-                  # cat( sprintf("chrom: %s\nosw: %s\nlib: %s\n", chrom_input, osw_input, lib_input))
-                  tictoc::tic("Plotting:")
-                  out.plot.h <- DrawAlignR::curateXICplot( pep=naked_peptide, 
-                                                           uni_mod=peptide,
-                                                           in_sqMass=chrom_input,  df_lib=values$lib_df, in_osw=osw_input, df_osw=values$osw_df,
-                                                           plotPrecursor=input$Precursor,
-                                                           plotDetecting=input$Detecting,
-                                                           plotIdentifying=input$Identifying_Unique,
-                                                           plotIdentifying.Unique=input$Identifying_Unique,
-                                                           plotIdentifying.Shared=F,
-                                                           plotIdentifying.Against=F,
-                                                           doFacetZoom=F,
-                                                           doPlot=T,
-                                                           Charge_State=input$Charge,
-                                                           printPlot=F,
-                                                           store_plots_subdir=NULL,
-                                                           use_top_trans_pep=F,
-                                                           transition_selection_list=values$transition_selection_list,
-                                                           show_n_transitions=input$nIdentifyingTransitions,
-                                                           show_transition_scores=input$ShowTransitionScores,
-                                                           show_all_pkgrprnk=input$ShowAllPkGrps,
-                                                           # show_manual_annotation = manual_annotation_coordinates,
-                                                           show_peak_info_tbl=F,
-                                                           show_legend=T,
-                                                           mzPntrs=values$mzPntrs[[current_run_id]]
-                  )
-                  
-                  tictoc::toc()
-                  # )
-                  # output$log <- renderText( paste(log, collapse = '\n') )
-                  plotly::ggplotly( (out.plot.h), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
-                    layout(title = list(text = paste0(out.plot.h$labels$title,
-                                                      '<br>',
-                                                      '<sup>',
-                                                      gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', out.plot.h$labels$subtitle)),
-                                                      '</sup>')))
-                  
-                }, 
-                error = function(e){
-                  message(sprintf("[MasterXICPlotting] There was the following error that occured during XIC Plotting: %s\n", e$message))
-                }
-              ) # End tryCatch
-              
-              
-            }) # End renderPlotly
+                }) # End renderPlotly
+                
+                observeEvent( input[[paste0(plotname, "_hover")]], {
+                  print( input[[paste0(plotname, "_hover")]]  )
+                })
+              }, 
+              error = function(e){
+                message(sprintf("[MasterXICPlotting] There was the following error that occured during XIC Plotting: %s\n", e$message))
+              }
+            ) # End tryCatch
+            
+            
+            
           }) # End local
         } # End For
         

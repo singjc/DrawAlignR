@@ -76,7 +76,7 @@ getXICs4AlignObj <- function(dataPath, runs, oswFiles, analytes, XICfilter = "sg
     message("Fetching XICs from ", runname, " ", runs[[runname]])
     XICs[[i]] <- lapply(seq_along(analytes), function(j){
       analyte <- analytes[j]
-      chromIndices <- DIAlignR:::selectChromIndices(oswFiles, runname = runname, analyte = analyte)
+      chromIndices <- DIAlignR::selectChromIndices(oswFiles, runname = runname, analyte = analyte)
       if(is.null(chromIndices)){
         warning("Chromatogram indices for ", analyte, " are missing in ", runs[[runname]])
         message("Skipping ", analyte)
@@ -141,7 +141,7 @@ getXICs <- function(analytes, runs, dataPath = ".", maxFdrQuery = 1.0, XICfilter
   oswFiles <- getOswFiles(dataPath, filenames, maxFdrQuery = maxFdrQuery, analyteFDR = 1.00,
                          oswMerged = oswMerged, analytes = analytes, runType = runType,
                          analyteInGroupLabel = analyteInGroupLabel, identifying = identifying, mzPntrs = mzPntrs)
-  refAnalytes <- DIAlignR:::getAnalytesName(oswFiles, commonAnalytes = FALSE)
+  refAnalytes <- DIAlignR::getAnalytesName(oswFiles, commonAnalytes = FALSE)
   analytesFound <- intersect(analytes, refAnalytes)
   analytesNotFound <- setdiff(analytes, analytesFound)
   if(length(analytesNotFound)>0){

@@ -1,3 +1,84 @@
+## quiets concerns of R CMD check re: the .'s that appear in pipelines
+if(getRversion() >= "2.15.1")  utils::globalVariables(c("."))
+
+#' Fetch the reference run-index.
+#'
+#' Provides the reference run-index based on lowest m-score.
+#' @importFrom dplyr %>%
+#' @author Shubham Gupta, \email{shubh.gupta@mail.utoronto.ca}
+#'
+#' ORCID: 0000-0003-3500-8152
+#'
+#' License: (c) Author (2019) + MIT
+#' Date: 2019-12-13
+#' @param oswFiles (list of data-frames) it is output from getOswFiles function.
+#' @param analyte (string) analyte is as PRECURSOR.GROUP_LABEL or as PEPTIDE.MODIFIED_SEQUENCE and PRECURSOR.CHARGE from osw file.
+#' @return An integer
+#' @examples
+#' data(oswFiles_DIAlignR, package="DIAlignR")
+#' \dontrun{
+#' getRefRun(oswFiles = oswFiles_DIAlignR, analyte = "AQPPVSTEY_2")
+#' getRefRun(oswFiles = oswFiles_DIAlignR, analyte = "14299_QFNNTDIVLLEDFQK/3")
+#' }
+#' @seealso \code{\link{getOswFiles}, \link{getOswAnalytes}}
+getRefRun <- function(oswFiles, analyte){
+  # Select reference run based on m-score
+  minMscore <- 1
+  refRunIdx <- NULL
+  for(runIdx in seq_along(oswFiles)){
+    m_score <- oswFiles[[runIdx]] %>%
+      dplyr::filter(transition_group_id == analyte & peak_group_rank == 1) %>% .$m_score
+    # Check for numeric(0) condition and proceed.
+    if(length(m_score) != 0){
+      if(m_score < minMscore){
+        minMscore <- m_score
+        refRunIdx <- runIdx
+      }
+    }
+  }
+  refRunIdx
+}
+
+#' Chromatogram indices of analyte in a run.
+#'
+#' select chromatogram indices by matching analyte and runname in oswFiles.
+#' @importFrom dplyr %>%
+#' @author Shubham Gupta, \email{shubh.gupta@mail.utoronto.ca}
+#'
+#' ORCID: 0000-0003-3500-8152
+#'
+#' License: (c) Author (2019) + MIT
+#' Date: 2019-12-13
+#' @param oswFiles (list of data-frames) it is the output from getOswFiles function.
+#' @param runname (string) Must be a combination of "run" and an iteger e.g. "run2".
+#' @param analyte (string) analyte is as PRECURSOR.GROUP_LABEL or as PEPTIDE.MODIFIED_SEQUENCE and PRECURSOR.CHARGE from osw file.
+#' @return A vector of Integers
+#' @examples
+#' data(oswFiles_DIAlignR, package="DIAlignR")
+#' \dontrun{
+#' selectChromIndices(oswFiles = oswFiles_DIAlignR, runname = "run2", analyte = "AQPPVSTEY_2")
+#' selectChromIndices(oswFiles = oswFiles_DIAlignR, runname = "run0",
+#'  analyte = "14299_QFNNTDIVLLEDFQK/3")
+#' }
+#' @seealso \code{\link{getOswFiles}, \link{getOswAnalytes}}
+selectChromIndices <- function(oswFiles, runname, analyte){
+  # Pick chromatrogram indices from osw table.
+  chromIndices <- oswFiles[[runname]] %>%
+    dplyr::filter(transition_group_id == analyte) %>% .$chromatogramIndex
+  # Check for character(0) condition and proceed.
+  if(length(chromIndices) != 0){
+    chromIndices <- as.integer(strsplit(chromIndices, split = ",")[[1]])
+  } else {
+    return(NULL)
+  }
+  if(any(is.na(chromIndices))){
+    # Indices for one or more fragment-ions are missing. This could happen if .chrom.mzML file doesn't have them.
+    return(NULL)
+  }
+  # Select the first row if there are many peak-groups.
+  chromIndices
+}
+
 #' Convert Text Input separated by a comma to a numeric vector
 #' @param text A character vector containing numbers separated by a comma
 #' @return A numeric vector
