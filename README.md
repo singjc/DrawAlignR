@@ -13,14 +13,15 @@ if(!require("devtools")) install.packages("devtools")
 ## *Note*: If you're using windows, you may have to restart your r session after each Bioconductor package install.  
 ## There may be times when BiocManager or one of the packages installed from BiocManager is not recognized as being installed until refreshing R's lib list.
 if(!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
-## Install zlibbioc, Rhdf5lib and mzR if not installed.
-## *Note*: If you're using windows, you may have to restart your r session after each Bioconductor package install.  
-## There may be times when BiocManager or one of the packages installed from BiocManager is not recognized as being installed until refreshing R's lib list.
-if(!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
+if(!require("BiocInstaller")) BiocManager::install("BiocInstaller")
+if(!require("zlibbioc")) BiocManager::install("zlibbioc")
+if(!require("Rhdf5lib")) BiocManager::install("Rhdf5lib")
+if(!require("mzR")) BiocManager::install("mzR", suppressUpdates = TRUE)
 ## Use install_github to install necessary packages to run DrawAlignR
-install_github("Roestlab/DrawAlignR", build_vignettes=TRUE, dependencies=TRUE, type="source")
+install_github("Roestlab/DrawAlignR", build_vignettes=FALSE, dependencies=TRUE, type="source")
 ## Load DrawAlignR
 library(DrawAlignR)
+DrawAlignR::runDrawAlignR()
 ```
 
 ## Overview

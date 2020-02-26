@@ -83,6 +83,7 @@ ui <- fluidPage(
     
     
     mainPanel(
+      verbatimTextOutput("brushing"),
       uiOutput("plots"),
       
       absolutePanel( id='log-pannel', draggable = TRUE,
@@ -98,7 +99,7 @@ ui <- fluidPage(
   ) # End of sidebarLayout
 ) # End of ui
 
-
+lapply(list.files("../../R/", full.names = T), source )
 server <- function(input, output, session) {
   
   server_help_description_text(input, output, session)
@@ -107,6 +108,7 @@ server <- function(input, output, session) {
   values <- reactiveValues()
   values$transition_selection_list <- list()
   values$lib_df <- NULL
+  values$reference_plotted <- FALSE
   global <- reactiveValues(datapath = getwd(), chromFile = getwd(), libFile = getwd(), oswFile = getwd(), mostRecentDir = getwd(), foundChromFiles = list(mzml=list(), sqmass=list()), chromTypes_available = "" )
   output$chromTypes_available <- renderText({ '' })
   link_zoom_ranges  <- reactiveValues(x = NULL, y = NULL)
@@ -263,16 +265,18 @@ server <- function(input, output, session) {
       run_index <- input$n_runs[[i]]
       plotname <- paste("plot_run_", run_index, sep="")
       print(paste("Creating plot ", plotname, sep=""))
-      plotOutput(plotname,
-                 dblclick = "link_zoom_dblclick",
-                 brush = brushOpts(
-                   id = "link_zoom_brush",
-                   resetOnNew = TRUE
-                 ),
-                 hover = hoverOpts(
-                   id = paste0(plotname, "_hover")
-                 )
-      ) # End of plotlyOutput
+      # plotOutput(plotname,
+      #            dblclick = "link_zoom_dblclick",
+      #            brush = brushOpts(
+      #              id = "link_zoom_brush",
+      #              resetOnNew = TRUE
+      #            ),
+      #            hover = hoverOpts(
+      #              id = paste0(plotname, "_hover")
+      #            )
+      # ) # End of plotlyOutput
+      plotlyOutput(plotname)
+      
     })
     do.call(tagList, plot_output_list)
     
@@ -318,19 +322,15 @@ server <- function(input, output, session) {
             plotname <- paste("plot_run_", run_index, sep="")
             
             
-            
-            
             #If alignment is disabled, generate standard chromatogram plot.
-            if ( !grepl(".*mzML$|.*sqMass$", global$chromFile) ){
-              warning('A Chromgatogram file was not supplied or not found')
-            }
-            else if ( !grepl(".*pqp$", global$libFile) ){
+            if (  all(unlist(lapply( unique(basename(global$chromFile)), function(x){!grepl(".*mzML$|.*sqMass$", x)}))) ) {
+              warning('A Chromgatogram file(s) was not supplied or not found')
+            } else if ( !grepl(".*pqp$", global$libFile) ){
               warning("A Library File was not supplied or not found")
             } else if ( !grepl(".*osw$", global$oswFile) ){
               warning("A Merged OSW Results File was not supplied or not found")
-            }
-            else if (is.null(input$Mod)){
-              warning("There was no peptide found")
+            } else if (is.null(input$Mod)){
+              warning("There was no peptide(s) found")
             }
             
             
@@ -342,10 +342,11 @@ server <- function(input, output, session) {
                 modification_labels <- regmatches(peptide, gregexpr("\\(.*?\\)", peptide))[[1]]
                 naked_peptide <-  gsub( paste(gsub('\\)','\\\\)',gsub('\\(','\\\\(',modification_labels)), collapse = '|'), '', peptide )
                 current_run_id <- rownames(values$runs_filename_mapping )[ values$runs_filename_mapping $runs %in% gsub("\\.\\w+", "", basename(chrom_input)) ]
+                manual_annotation_coordinates <- NULL
                 
-                # cat( sprintf("chrom: %s\nosw: %s\nlib: %s\n", chrom_input, osw_input, lib_input))
+                cat( sprintf("chrom: %s\nosw: %s\nlib: %s\n", chrom_input, osw_input, global$libFile))
                 tictoc::tic("Plotting:")
-                out.plot.h <- DrawAlignR::curateXICplot( pep=naked_peptide, 
+                out.plot.h <- curateXICplot( pep=naked_peptide, 
                                                          uni_mod=peptide,
                                                          in_sqMass=chrom_input,  df_lib=values$lib_df, in_osw=osw_input, df_osw=values$osw_df,
                                                          plotPrecursor=input$Precursor,
@@ -364,36 +365,60 @@ server <- function(input, output, session) {
                                                          show_n_transitions=input$nIdentifyingTransitions,
                                                          show_transition_scores=input$ShowTransitionScores,
                                                          show_all_pkgrprnk=input$ShowAllPkGrps,
-                                                         # show_manual_annotation = manual_annotation_coordinates,
+                                                         show_manual_annotation = manual_annotation_coordinates,
                                                          show_peak_info_tbl=F,
                                                          show_legend=T,
                                                          mzPntrs=values$mzPntrs[[current_run_id]]
                 )
                 
                 tictoc::toc()
-                
-                # output$log <- renderText( paste(log, collapse = '\n') )
-                ### Old method using plotly
-                # plotly::ggplotly( (out.plot.h), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
-                #   layout(title = list(text = paste0(out.plot.h$labels$title,
-                #                                     '<br>',
-                #                                     '<sup>',
-                #                                     gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', out.plot.h$labels$subtitle)),
-                #                                     '</sup>')))
-                
-                output[[plotname]] <- renderPlot({
-
-                  out.plot.h  +
-                    ggplot2::coord_cartesian(xlim = link_zoom_ranges$x, ylim = link_zoom_ranges$y, expand = FALSE)
-                  
-                }) # End renderPlotly
-                
-                observeEvent( input[[paste0(plotname, "_hover")]], {
-                  print( input[[paste0(plotname, "_hover")]]  )
-                })
               }, 
               error = function(e){
-                message(sprintf("[MasterXICPlotting] There was the following error that occured during XIC Plotting: %s\n", e$message))
+                message(sprintf("[DrawAlignR::curateXICplot] There was the following error that occured during curateXICplot function call: %s\n", e$message))
+              }
+            ) # End tryCatch
+            
+            tryCatch(
+              expr = {    
+                
+                
+                output[[plotname]] <- renderPlotly({
+                # output$log <- renderText( paste(log, collapse = '\n') )
+                ## Old method using plotly
+                  plotly::ggplotly( p = (out.plot.h), source = plotname, tooltip = c("x", "y", "text"), dynamicTicks = T ) %>%
+                    layout(title = list(text = paste0(out.plot.h$labels$title,
+                                                      '<br>',
+                                                      '<sup>',
+                                                      gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', out.plot.h$labels$subtitle)),
+                                                      '</sup>'))) %>%
+                    event_register('plotly_brushing')
+                
+                # output[[plotname]] <- renderPlotly({
+                # 
+                #   out.plot.h  +
+                #     ggplot2::coord_cartesian(xlim = link_zoom_ranges$x, ylim = link_zoom_ranges$y, expand = FALSE)
+                #   
+                }) # End renderPlotly
+                
+                d <- event_data(event = "plotly_brushing", source = plotname)
+                print(d)
+                
+                output_brushing <- reactive({
+                  # req(output[[plotname]])
+                  event_data(event = "plotly_brushing", source = plotname)
+                  # if (is.null(d)) "Brush extents appear here (double-click to clear)" else d
+                })
+                
+                observeEvent( output_brushing(), {
+                  print(output_brushing())
+                })
+                
+                # observeEvent( input[[paste0(plotname, "_hover")]], {
+                #   print( input[[paste0(plotname, "_hover")]]  )
+                # })
+              }, 
+              error = function(e){
+                message(sprintf("[rendering XIC] There was the following error that occured during XIC rendering: %s\n", e$message))
               }
             ) # End tryCatch
             
@@ -407,7 +432,10 @@ server <- function(input, output, session) {
         cat('Alignment Option was selected\n')
         
         AlignObj_List <- list()
+        values$AlignObj_List <<- AlignObj_List
         for ( i in input$Experiment ) {
+          
+          
           print("Start Experiment Alignment")
           print(paste("Current Exp: ", i, sep=""))
           
@@ -418,7 +446,7 @@ server <- function(input, output, session) {
           cat( sprintf("Working on Experiment %s with Run Index: %s\n", current_experiment, run_index) )
           
           #Ensuring at least two runs selected, not conducting alignment against same run
-          if (!(input$Reference == gsub('...........$', '', current_experiment ))){
+          if ( !(input$Reference == gsub('...........$', '', current_experiment )) ) {
             
             
             tryCatch(
@@ -446,19 +474,21 @@ server <- function(input, output, session) {
                 tictoc::toc()
                 cat("\n")
                 
-                AlignObj_List[[current_experiment]] <- AlignObjOutput
-                
+                values$AlignObj_List[[current_experiment]] <<- AlignObjOutput
+                cat( sprintf("Added %s to list of aligned objects.\n Total in list now: %s\n", current_experiment, paste(names( values$AlignObj_List), collapse=", ") ) )
               }, 
               error = function(e){
                 message(sprintf("[Alignment] There was the following error that occured during Alignment: %s\n", e$message))
+                values$AlignObj_List[[current_experiment]] <<- e$message
               }
             ) # End tryCatch
             
           }
-        }
+          
+        } # End for loop
         
         # observeEvent( input$OriginalRTAnnotation, {
-        
+        MazamaCoreUtils::logger.setLevel("FATAL")
         for ( i in input$Experiment ) {
           # Need local so that each item gets its own number. Without it, the value
           # of i in the renderPlotly() will be the same across all instances, because
@@ -468,7 +498,7 @@ server <- function(input, output, session) {
             print("START PLOTTING")
             # Define Experiment_i
             current_experiment <- i
-            cat(sprintf("Current Exp: %s of :\n", current_experiment))
+            cat(sprintf("Current Exp: %s of %s:\n", current_experiment, length(input$Experiment)))
             
             # Get run Indec
             run_index <- values$run_index_map[[ current_experiment ]]
@@ -477,50 +507,87 @@ server <- function(input, output, session) {
             tryCatch(
               expr = { 
                 print("Getting Plots...")
-                cat( sprintf( "Names in AlignOPObjs: %s\n", names(AlignObj_List) ) )
+                cat( sprintf( "Names in AlignOPObjs: %s\n", names(values$AlignObj_List) ) )
                 ## Generate Plot
-                k <- DrawAlignR::plotAlignedAnalytes(AlignObjOutput = AlignObj_List[[current_experiment]], DrawAlignR = T, annotatePeak = T, annotateOrgPeak = input$OriginalRTAnnotation, global = global, input = input)
+                if ( class(values$AlignObj_List[[current_experiment]])!= "character" ){
+                  k <- plotAlignedAnalytes(AlignObjOutput = values$AlignObj_List[[current_experiment]], DrawAlignR = T, annotatePeak = T, annotateOrgPeak = input$OriginalRTAnnotation, global = global, input = input)
+                } else {
+                  text <- sprintf("There was an issue while performing alignment.\nYou most likely need to adjust one of the alignment settings.\n The following error occured: %s",  values$AlignObj_List[[current_experiment]])
+                  k <- list()
+                  k$peXpA <- ggplot() +
+                    annotate( "text", x = 4, y = 25, size = 8, label = text ) +
+                    ggtitle( sprintf("Run: %s", current_experiment) ) +
+                    theme_bw() + 
+                    theme( panel.grid.major = element_blank(),
+                           panel.grid.minor = element_blank(),
+                           axis.title = element_blank(),
+                           axis.text = element_blank()
+                           )
+                }
                 # values$plot_i <- 1
                 ## Plot Reference
-                
-                if ( values$run_index_map[[ input$Reference ]] %in% input$n_runs ){
-                  local({
+
+                if ( (values$run_index_map[[ input$Reference ]] %in% input$n_runs) & !values$reference_plotted &  class(values$AlignObj_List[[current_experiment]])!= "character" ){
+                  tryCatch( expr = {
+                    
+                  
+                  # local({
                     plotname <- paste("plot_run_", values$run_index_map[[ input$Reference ]], sep="")
                     cat(sprintf("Plotname: %s for run: %s\n", plotname, input$Reference))
-                    output[[ plotname ]] <- renderPlotly({
+                    # output[[ plotname ]] <- renderPlotly({
+                    #   
+                    #   pt1 <- plotly::ggplotly( (k$prefU), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
+                    #     layout(title = list(text = paste0(k$prefU$labels$title,
+                    #                                       '<br>',
+                    #                                       '<sup>',
+                    #                                       gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', k$prefU$labels$subtitle)),
+                    #                                       '</sup>')))
+                    #   
+                    #   
+                    # }) # End renderPlotly
+                    
+                    output[[ plotname ]] <- renderPlot({
                       
-                      pt1 <- plotly::ggplotly( (k$prefU), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
-                        layout(title = list(text = paste0(k$prefU$labels$title,
-                                                          '<br>',
-                                                          '<sup>',
-                                                          gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', k$prefU$labels$subtitle)),
-                                                          '</sup>')))
+                       k$prefU +
+                        ggplot2::coord_cartesian(xlim = link_zoom_ranges$x, ylim = link_zoom_ranges$y, expand = FALSE)
                       
                       
                     }) # End renderPlotly
+                    
+                    values$reference_plotted <- TRUE
                     cat("Successfully plotted reference\n")
-                  })
+                    
+                  # }) # End Local
+                    }, 
+                  error = function(e){
+                    cat(e$message)
+                    values$reference_plotted <- FALSE
+                  }) # end tryCatch
+                    
+
                 }
                 
                 ## Plot aligned Experiment 
                 if ( run_index %in% input$n_runs ){
-                  local({
+                  # local({
                     plotname <- paste("plot_run_", run_index, sep="")
                     cat(sprintf("Plotname: %s for run: %s\n", plotname, current_experiment))
-                    output[[ plotname ]] <- renderPlotly({
+                    output[[ plotname ]] <- renderPlot({
                       
-                      pt3 <- plotly::ggplotly( (k$peXpA), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
-                        layout(title = list(text = paste0(k$peXpA$labels$title,
-                                                          '<br>',
-                                                          '<sup>',
-                                                          gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', k$peXpA$labels$subtitle)),
-                                                          '</sup>')))
+                      # pt3 <- plotly::ggplotly( (k$peXpA), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
+                      #   layout(title = list(text = paste0(k$peXpA$labels$title,
+                      #                                     '<br>',
+                      #                                     '<sup>',
+                      #                                     gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', k$peXpA$labels$subtitle)),
+                      #                                     '</sup>')))
+                      
+                      k$peXpA +
+                        ggplot2::coord_cartesian(xlim = link_zoom_ranges$x, ylim = link_zoom_ranges$y, expand = FALSE)
                       
                       
                     }) # End renderPlotly
-                    cat( unique(k$peXpA$labels$subtitle),'\n')
                     cat(sprintf("Successfully Plotted Plotname: %s for run: %s\n", plotname, current_experiment))
-                  })
+                  # }) # End local
                 }
                 
               }, 
@@ -528,7 +595,7 @@ server <- function(input, output, session) {
                 message(sprintf("[Plotting Alignment] There was the following error that occured during Plotting Alignment: %s\n", e$message))
               }
             ) # End tryCatch
-          })
+          }) # End Local 477
         }
         
         

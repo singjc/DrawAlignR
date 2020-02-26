@@ -318,17 +318,23 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
       dplyr::filter( Charge==input$Charge ) -> osw_dt
     
     ## Remove rows with NULL value in ipf_pep
-    osw_dt %>%
-      dplyr::filter( !is.null(ipf_pep) ) %>%
-      dplyr::filter( !is.nan(ipf_pep) ) -> osw_dt
+    if ("ipf_pep" %in% colnames(osw_dt)) {
+      if (!is.null(unlist(osw_dt$ipf_pep))) {
+        osw_dt <- osw_dt %>% dplyr::filter(!is.null(ipf_pep)) %>% 
+          dplyr::filter(!is.nan(ipf_pep))
+      }
+    }
     
     ## Remove rows that are not current peptide
     osw_dt %>%
       dplyr::filter( FullPeptideName == input$Mod ) -> osw_dt
     
     ## Get data for the best peak as defined by the feature with the lowest IPF posterior error probability 
-    osw_dt %>%
-      dplyr::filter( m_score==min(m_score) ) -> osw_dt #### No longer filter by peak group
+    if ("m_score" %in% colnames(osw_dt)) {
+      osw_dt <- osw_dt %>% dplyr::filter(m_score == min(m_score))
+    }  else {
+      osw_dt <- osw_dt %>% dplyr::filter(ms2_m_score == min(ms2_m_score))
+    }
     
     if ( dim(osw_dt)[1] > 1 ){
       osw_dt %>%
@@ -346,21 +352,27 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
       dplyr::filter( Charge==input$Charge ) -> osw_dt_ref
     
     ## Remove rows with NULL value in ipf_pep
-    osw_dt_ref %>%
-      dplyr::filter( !is.null(ipf_pep) ) %>%
-      dplyr::filter( !is.nan(ipf_pep) ) -> osw_dt_ref
+    if ("ipf_pep" %in% colnames(osw_dt)) {
+      if (!is.null(unlist(osw_dt$ipf_pep))) {
+        osw_dt <- osw_dt %>% dplyr::filter(!is.null(ipf_pep)) %>% 
+          dplyr::filter(!is.nan(ipf_pep))
+      }
+    }
     
     ## Remove rows that are not current peptide
-    osw_dt_ref %>%
-      dplyr::filter( FullPeptideName == input$Mod ) -> osw_dt_ref
+    osw_dt %>%
+      dplyr::filter( FullPeptideName == input$Mod ) -> osw_dt
     
     # ## Get data for the best peak as defined by the feature with the lowest IPF posterior error probability 
-    # osw_dt_ref %>%
-    #   dplyr::filter( m_score==min(m_score) ) -> osw_dt_ref #### No longer filter by peak group
+    # if ("m_score" %in% colnames(osw_dt)) {
+    #   osw_dt <- osw_dt %>% dplyr::filter(m_score == min(m_score))
+    # }  else {
+    #   osw_dt <- osw_dt %>% dplyr::filter(ms2_m_score == min(ms2_m_score))
+    # }
     # 
-    # if ( dim(osw_dt_ref)[1] > 1 ){
-    #   osw_dt_ref %>%
-    #     dplyr::filter( peak_group_rank==min(peak_group_rank) ) -> osw_dt_ref
+    # if ( dim(osw_dt)[1] > 1 ){
+    #   osw_dt %>%
+    #     dplyr::filter( peak_group_rank==min(peak_group_rank) ) -> osw_dt
     # }
     
     df <- data.frame(

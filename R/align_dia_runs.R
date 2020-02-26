@@ -102,7 +102,7 @@ getAlignObjs <- function(analytes, runs, dataPath = ".", alignType = "hybrid",
                           analyteInGroupLabel = analyteInGroupLabel, identifying = identifying, mzPntrs = mzPntrs)
   
   # Report analytes that are not found
-  refAnalytes <- DIAlignR::getAnalytesName(oswFiles, analyteFDR, commonAnalytes = FALSE)
+  refAnalytes <- getAnalytesName(oswFiles, analyteFDR, commonAnalytes = FALSE)
   analytesFound <- intersect(analytes, refAnalytes)
   analytesNotFound <- setdiff(analytes, analytesFound)
   if(length(analytesNotFound)>0){

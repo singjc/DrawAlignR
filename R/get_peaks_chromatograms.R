@@ -76,7 +76,7 @@ getXICs4AlignObj <- function(dataPath, runs, oswFiles, analytes, XICfilter = "sg
     message("Fetching XICs from ", runname, " ", runs[[runname]])
     XICs[[i]] <- lapply(seq_along(analytes), function(j){
       analyte <- analytes[j]
-      chromIndices <- DIAlignR::selectChromIndices(oswFiles, runname = runname, analyte = analyte)
+      chromIndices <- selectChromIndices(oswFiles, runname = runname, analyte = analyte)
       if(is.null(chromIndices)){
         warning("Chromatogram indices for ", analyte, " are missing in ", runs[[runname]])
         message("Skipping ", analyte)
@@ -134,14 +134,14 @@ getXICs <- function(analytes, runs, dataPath = ".", maxFdrQuery = 1.0, XICfilter
     return(NULL)
   }
   # Get filenames from .merged.osw file and check if names are consistent between osw and mzML files.
-  filenames <- DIAlignR::getRunNames(dataPath, oswMerged, nameCutPattern)
+  filenames <- getRunNames(dataPath, oswMerged, nameCutPattern)
   filenames <- filenames[filenames$runs %in% runs,]
 
   # Get Chromatogram indices for each peptide in each run.
   oswFiles <- getOswFiles(dataPath, filenames, maxFdrQuery = maxFdrQuery, analyteFDR = 1.00,
                          oswMerged = oswMerged, analytes = analytes, runType = runType,
                          analyteInGroupLabel = analyteInGroupLabel, identifying = identifying, mzPntrs = mzPntrs)
-  refAnalytes <- DIAlignR::getAnalytesName(oswFiles, commonAnalytes = FALSE)
+  refAnalytes <- getAnalytesName(oswFiles, commonAnalytes = FALSE)
   analytesFound <- intersect(analytes, refAnalytes)
   analytesNotFound <- setdiff(analytes, analytesFound)
   if(length(analytesNotFound)>0){
