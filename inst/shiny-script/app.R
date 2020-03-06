@@ -67,6 +67,9 @@ source( "external/chromFile_Input_Button.R", local = TRUE )
 source( "external/libFile_Input_Button.R", local = TRUE )
 source( "external/oswFile_Input_Button.R", local = TRUE )
 source( "external/workingDirectory_Input.R", local = TRUE )
+
+# UI ----------------------------------------------------------------------
+
 ui <- fluidPage(
   
   useShinyjs(),  # Include shinyjs
@@ -99,6 +102,10 @@ ui <- fluidPage(
   ) # End of sidebarLayout
 ) # End of ui
 
+
+# SERVER ------------------------------------------------------------------
+
+## TODO: REMOVE THE LINE BELOW WHEN DEPLOYING STABLE VERSION
 lapply(list.files("../../R/", full.names = T), source )
 server <- function(input, output, session) {
   
@@ -109,6 +116,7 @@ server <- function(input, output, session) {
   values$transition_selection_list <- list()
   values$lib_df <- NULL
   values$reference_plotted <- FALSE
+  values$drives <- shinyFiles::getVolumes()
   global <- reactiveValues(datapath = getwd(), chromFile = getwd(), libFile = getwd(), oswFile = getwd(), mostRecentDir = getwd(), foundChromFiles = list(mzml=list(), sqmass=list()), chromTypes_available = "" )
   output$chromTypes_available <- renderText({ '' })
   link_zoom_ranges  <- reactiveValues(x = NULL, y = NULL)
@@ -265,17 +273,17 @@ server <- function(input, output, session) {
       run_index <- input$n_runs[[i]]
       plotname <- paste("plot_run_", run_index, sep="")
       print(paste("Creating plot ", plotname, sep=""))
-      # plotOutput(plotname,
-      #            dblclick = "link_zoom_dblclick",
-      #            brush = brushOpts(
-      #              id = "link_zoom_brush",
-      #              resetOnNew = TRUE
-      #            ),
-      #            hover = hoverOpts(
-      #              id = paste0(plotname, "_hover")
-      #            )
-      # ) # End of plotlyOutput
-      plotlyOutput(plotname)
+      plotOutput(plotname,
+                 dblclick = "link_zoom_dblclick",
+                 brush = brushOpts(
+                   id = "link_zoom_brush",
+                   resetOnNew = TRUE
+                 ),
+                 hover = hoverOpts(
+                   id = paste0(plotname, "_hover")
+                 )
+      ) # End of plotlyOutput
+      # plotlyOutput(plotname)
       
     })
     do.call(tagList, plot_output_list)
@@ -313,7 +321,7 @@ server <- function(input, output, session) {
         cat("Alignment option was not selected\n")
         
         
-        #Generate all plots. Max plots set to 10
+        #Generate all plots.
         # NOTE: Should we loop over each chrom file input, or loop over each selected n runs input
         for ( i in seq(1,length(input$n_runs)) ) {
           local({
@@ -323,6 +331,8 @@ server <- function(input, output, session) {
             
             
             #If alignment is disabled, generate standard chromatogram plot.
+            
+            ## Warning Handles
             if (  all(unlist(lapply( unique(basename(global$chromFile)), function(x){!grepl(".*mzML$|.*sqMass$", x)}))) ) {
               warning('A Chromgatogram file(s) was not supplied or not found')
             } else if ( !grepl(".*pqp$", global$libFile) ){

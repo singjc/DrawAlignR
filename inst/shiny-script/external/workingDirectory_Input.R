@@ -11,7 +11,10 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
         ##*********************************
         tryCatch(
           expr = {
-            shinyDirChoose(input, 'interactiveWorkingDirectory', roots = c( `Working Directory` =  "../", home = path.expand("~"), root = .Platform$file.sep, `Recent Directory` = global$mostRecentDir ), defaultRoot = 'Working Directory', defaultPath = .Platform$file.sep  )
+            roots <- c( "../", path.expand("~"), .Platform$file.sep, global$mostRecentDir )
+            names(roots) <- c("Working Directory", "home", "root", "Recent Directory")
+            roots <- c(roots, values$drives()) 
+            shinyDirChoose(input, 'interactiveWorkingDirectory', roots = roots, defaultRoot = 'Working Directory', defaultPath = .Platform$file.sep  )
             if ( input$WorkingDirectory!="" ) {
               global$datapath <- normalizePath( input$WorkingDirectory )
               ## Get mapping of runs to filename
@@ -36,8 +39,12 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                 } else {
                   root_node <- .Platform$file.sep
                 }
+                
+                print( dir() )
+                
                 ## Get full working directroy of user selected directory
                 global$datapath <- normalizePath( paste( normalizePath(root_node), file.path( paste( unlist(dir()$path[-1]), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep ) )
+                print(global$datapath)
                 ## Get mapping of runs to filename
                 values$runs_filename_mapping <- DIAlignR::getRunNames(global$datapath, oswMerged = TRUE)
                 ## Update global most recent directroy
