@@ -26,16 +26,41 @@ getRefRun <- function(oswFiles, analyte){
   minMscore <- 1
   refRunIdx <- NULL
   for(runIdx in seq_along(oswFiles)){
+    ## Filter first on m_score to find the best candiate peptide feature
     m_score <- oswFiles[[runIdx]] %>%
-      dplyr::filter(transition_group_id == analyte & peak_group_rank == 1) %>% .$m_score
-    # Check for numeric(0) condition and proceed.
-    if(length(m_score) != 0){
-      if(m_score < minMscore){
-        minMscore <- m_score
-        refRunIdx <- runIdx
+      # dplyr::filter(transition_group_id == analyte )
+      dplyr::group_by( transition_group_id ) %>%
+      dplyr::filter(transition_group_id == analyte & m_score==min(m_score) ) 
+    ## Check to see if there are still more than one peak group per peptide option.
+    ## If there is then do a second pass filter for the lowest peakgroup rank
+    if ( dim(m_score)[1]>1 ){
+      m_score %>%
+        dplyr::filter(transition_group_id == analyte & peak_group_rank==min(peak_group_rank) ) -> m_score
+      if ( dim(m_score)[1]>1 ){
+        m_score %>%
+          dplyr::filter( dplyr::row_number()==1 ) -> m_score
       }
     }
+    ## Extract on the m_score
+    m_score %>%
+      dplyr::ungroup() %>% .$m_score -> m_score
+    # Check for numeric(0) condition and proceed.
+    tryCatch(
+      expr = {
+        if(length(m_score) != 0){
+          if(m_score < minMscore){
+            minMscore <- m_score
+            refRunIdx <- runIdx
+          }
+        }
+      }, 
+      error = function(e){
+        message( sprintf("[DIAlignR::utils::getRefRun] There was an error that occured during reference run index extraction.\n%s", e$message))
+      }
+    )
+    
   }
+  ## Return refRunIdx
   refRunIdx
 }
 
@@ -61,13 +86,58 @@ getRefRun <- function(oswFiles, analyte){
 #'  analyte = "14299_QFNNTDIVLLEDFQK/3")
 #' }
 #' @seealso \code{\link{getOswFiles}, \link{getOswAnalytes}}
-selectChromIndices <- function(oswFiles, runname, analyte){
+selectChromIndices <- function(oswFiles, runname, analyte, product_mz_filter_list=NULL, return_index="chromatogramIndex",  keep_all_detecting=T){
+  
+  ## TMP Fix
+  ## Second pass filter to ensure only one analyte is being mapped once to the same peak
+  ## There are cases for ipf where different assays would result in the same peptide being mapped to the same peak multiple times due to being the winning hypothesis
+  oswFiles[[runname]] %>%
+    dplyr::group_by( transition_group_id, filename ) %>%
+    dplyr::add_count() %>%
+    dplyr::ungroup() -> tmp
+  tmp %>%
+    dplyr::group_by( transition_group_id, filename ) %>%
+    dplyr::filter( ifelse( n>1, ifelse(m_score==min(m_score), T, F), T ) ) -> tmp
+  ## Remove count column
+  tmp$n <- NULL
+  ## count again to check if there are sitll more than one entry
+  tmp %>%
+    dplyr::group_by( transition_group_id, filename ) %>%
+    dplyr::add_count() %>%
+    dplyr::ungroup() -> tmp
+  ## Remove count column
+  tmp$n <- NULL
+  
   # Pick chromatrogram indices from osw table.
-  chromIndices <- oswFiles[[runname]] %>%
-    dplyr::filter(transition_group_id == analyte) %>% .$chromatogramIndex
+  chromIndices <- tmp %>%
+    dplyr::filter(transition_group_id == analyte) %>% dplyr::pull( !!rlang::sym(return_index) )
+  
   # Check for character(0) condition and proceed.
   if(length(chromIndices) != 0){
-    chromIndices <- as.integer(strsplit(chromIndices, split = ",")[[1]])
+    ### TODO: Make this more stream-line
+    if ( !is.null(product_mz_filter_list) ){
+      oswFiles[[runname]] %>%
+        dplyr::filter(transition_group_id == analyte) %>%
+        dplyr::filter( m_score == min(m_score) ) %>%
+        dplyr::filter( peak_group_rank==min(peak_group_rank) ) %>%
+        dplyr::slice(1L) %>%
+        tidyr::separate_rows( product_mz, detecting_transitions, identifying_transitions, chromatogramIndex, transition_ids ) %>%
+        dplyr::mutate( product_mz_detecting=paste(product_mz, detecting_transitions, sep='_') ) -> tmp_long_oswFiles
+      ## Should all detecting transitions be forced to be kept even if mz is not overlapping
+      if ( keep_all_detecting ){
+        transition_boolean_filter <- (tmp_long_oswFiles$product_mz_detecting %in% product_mz_filter_list) | tmp_long_oswFiles$detecting_transitions==1
+      } else {
+        transition_boolean_filter <- (tmp_long_oswFiles$product_mz_detecting %in% product_mz_filter_list)
+      }
+      
+      tmp_long_oswFiles %>%
+        dplyr::filter( transition_boolean_filter ) %>% 
+        unique() %>%
+        dplyr::pull( !!rlang::sym(return_index) ) %>% as.integer() -> chromIndices
+      
+    } else {
+      chromIndices <- as.integer(strsplit(chromIndices, split = ",")[[1]])
+    }
   } else {
     return(NULL)
   }
@@ -77,15 +147,6 @@ selectChromIndices <- function(oswFiles, runname, analyte){
   }
   # Select the first row if there are many peak-groups.
   chromIndices
-}
-
-#' Convert Text Input separated by a comma to a numeric vector
-#' @param text A character vector containing numbers separated by a comma
-#' @return A numeric vector
-text2numericInput <- function(text) {
-  text <- gsub(" ", "", text)
-  split <- strsplit(text, ",", fixed = FALSE)[[1]]
-  as.numeric(split)
 }
 
 #' Find if an object exists in a list
@@ -119,6 +180,20 @@ getListObj <- function(x, name) {
       if (!is.null(out)) return(out)
     }
   }
+}
+
+#' check_sqlite_table
+#' @param conn Connection to database
+#' @param table Character vector to test for, if present in database
+#' @param msg A character to pre-append to stop error message. (Optional)
+#' @return Logical value, TRUE if table is present
+#' 
+#' @importFrom DBI dbExistsTable
+check_sqlite_table <- function( conn, table, msg="" ) {
+  if( !DBI::dbExistsTable( conn, table ) ){
+    out.msg <- sprintf("%s An Error occured! There was no %s Table found in %s\n", msg, table, conn@dbname)
+    stop( out.msg, call.=FALSE )
+  }  
 }
 
 #' Check is SCORE_IPF is in database

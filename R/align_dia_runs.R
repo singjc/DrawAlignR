@@ -57,7 +57,7 @@
 #' @export
 getAlignObjs <- function(analytes, runs, dataPath = ".", alignType = "hybrid",
                          runType = "DIA_Proteomics", refRun = NULL,
-                         analyteInGroupLabel = FALSE, identifying = FALSE, oswMerged = TRUE, nameCutPattern = "(.*)(/)(.*)",
+                         analyteInGroupLabel = FALSE, identifying = FALSE, oswMerged = TRUE, nameCutPattern = "(.*)(/)(.*)", chrom_ext=".chrom.mzML",
                          maxFdrQuery = 0.05, maxFdrLoess = 0.01, analyteFDR = 1.00, spanvalue = 0.1,
                          normalization = "mean", simMeasure = "dotProductMasked",
                          XICfilter = "sgolay", SgolayFiltOrd = 4, SgolayFiltLen = 9,
@@ -76,7 +76,7 @@ getAlignObjs <- function(analytes, runs, dataPath = ".", alignType = "hybrid",
     return(NULL)
   }
   ##### Get filenames from osw files and check if names are consistent between osw and mzML files. ######
-  filenames <- DIAlignR::getRunNames(dataPath, oswMerged, nameCutPattern)
+  filenames <- DIAlignR::getRunNames(dataPath, oswMerged, nameCutPattern, chrom_ext=chrom_ext)
   filenames <- filenames[filenames$runs %in% runs,]
   missingRun <- setdiff(runs, filenames$runs)
   if(length(missingRun) != 0){

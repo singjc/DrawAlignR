@@ -11,14 +11,14 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
         ##*********************************
         tryCatch(
           expr = {
-            roots <- c( "../", path.expand("~"), .Platform$file.sep, global$mostRecentDir )
+            roots <- c( getwd(), path.expand("~"), .Platform$file.sep, global$mostRecentDir )
             names(roots) <- c("Working Directory", "home", "root", "Recent Directory")
             roots <- c(roots, values$drives()) 
-            shinyDirChoose(input, 'interactiveWorkingDirectory', roots = roots, defaultRoot = 'Working Directory', defaultPath = .Platform$file.sep  )
+            shinyDirChoose(input, 'interactiveWorkingDirectory', roots = roots, defaultRoot = 'Working Directory', defaultPath = .Platform$file.sep, session  )
             if ( input$WorkingDirectory!="" ) {
               global$datapath <- normalizePath( input$WorkingDirectory )
               ## Get mapping of runs to filename
-              values$runs_filename_mapping <- DIAlignR::getRunNames(global$datapath, oswMerged = TRUE)
+              values$runs_filename_mapping <- DIAlignR::getRunNames(global$datapath, oswMerged = TRUE, chrom_ext = ".chrom.mzML|.chrom.sqMass")
               ## Search working directory for osw file, mzml files, pqpfiles
               subDirs <- normalizePath( list.dirs( path = global$datapath, full.names = T, recursive = F ) )
             } else {
@@ -46,7 +46,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                 global$datapath <- normalizePath( paste( normalizePath(root_node), file.path( paste( unlist(dir()$path[-1]), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep ) )
                 print(global$datapath)
                 ## Get mapping of runs to filename
-                values$runs_filename_mapping <- DIAlignR::getRunNames(global$datapath, oswMerged = TRUE)
+                values$runs_filename_mapping <- DIAlignR::getRunNames(global$datapath, oswMerged = TRUE, chrom_ext = ".chrom.mzML|.chrom.sqMass")
                 ## Update global most recent directroy
                 global$mostRecentDir <- global$datapath
                 
@@ -84,6 +84,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                 ## Load OSW file
                 use_ipf_score <- DrawAlignR:::Score_IPF_Present( global$oswFile[[1]] )
                 tictoc::tic("Reading and Cacheing OSW File")
+                ### TODO : Need to make sure that this is extracting the correct information from the osw file when using the ipf scores
                 osw_df <- mstools::getOSWData_( oswfile=global$oswFile[[1]], decoy_filter = TRUE, ms2_score = TRUE, ipf_score =  use_ipf_score)
                 m_score_filter_var <- ifelse( length(grep( "m_score|mss_m_score", colnames(osw_df), value = T))==2, "m_score", "ms2_m_score" )
                 osw_df %>%

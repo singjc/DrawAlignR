@@ -43,20 +43,83 @@
 #'  analytes = c("IHFLSPVRPFTLTPGDEEESFIQLITPVR_3"), filename = filenames$filename[3],
 #'   runType = "DIA_proteomics", analyteInGroupLabel = FALSE)
 #' }
+#' 
+#' @importFrom tictoc tic toc
 fetchAnalytesInfo <- function(oswName, maxFdrQuery, oswMerged,
                               analytes, filename, runType, analyteInGroupLabel = FALSE,
-                              identifying = FALSE){
+                              identifying = FALSE, identifying.transitionPEPfilter=0.6){
+  
   # Establish a connection of SQLite file.
   con <- DBI::dbConnect(RSQLite::SQLite(), dbname = oswName)
+  
+  # Check for presence of required SCORE_MS2 table
+  check_sqlite_table( conn=con, table="SCORE_MS2", msg="[DIAlignR::fetchAnalytesInfo:::check_sqlite_table]")
+  # If analysing IPF results, check for SCORE_IPF table
+  if ( runType=="DIA_Proteomics_ipf" ) check_sqlite_table( conn=con, table="SCORE_IPF", msg="[DIAlignR::fetchAnalytesInfo:::check_sqlite_table]")
+  
+  if ( runType=="DIA_Proteomics_ipf" & !is.null(analytes) ) analytes <- mstools::unimodTocodename( analytes )
+  
   # Generate a query.
+  ## TODO: Add fitlers for Identifying transitions at given PEP
   query <- getQuery(maxFdrQuery, oswMerged, analytes = analytes,
                     filename = filename, runType = runType,
                     analyteInGroupLabel = analyteInGroupLabel,
-                    identifying = identifying)
+                    identifying = identifying, identifying.transitionPEPfilter=identifying.transitionPEPfilter)
   # Run query to get peptides, their coordinates and scores.
-  analytesInfo <- tryCatch(expr = DBI::dbGetQuery(con, statement = query),
+  tictoc::tic()
+  analytesInfo <- tryCatch(expr = DBI::dbGetQuery(con, statement =  query ),
                            finally = DBI::dbDisconnect(con))
-  analytesInfo
+  
+  if ( F ){
+    analytesInfo %>% dplyr::filter( transition_group_id == analyte) -> tmp
+  }
+  # Second pass filter to ensure only one analyte is being mapped once to the same peak
+  # There are cases for ipf where different assays would result in the same peptide being mapped to the same peak multiple times due to being the winning hypothesis
+  analytesInfo$RT_Floored <- floor(analytesInfo$RT)
+
+  analytesInfo %>%
+    dplyr::group_by( transition_group_id, filename, RT_Floored  ) %>%
+    dplyr::add_count() %>%
+    dplyr::ungroup() -> analytesInfo
+  analytesInfo %>%
+    dplyr::group_by( transition_group_id, filename, RT_Floored ) %>%
+    dplyr::filter( ifelse( n>6, ifelse(m_score==min(m_score), T, F), T ) ) -> analytesInfo ### TODO: If I include identifying transitions, n will always be > 6
+  analytesInfo$n <- NULL
+  analytesInfo %>%
+    dplyr::group_by( transition_group_id, filename, peak_group_rank  ) %>%
+    dplyr::add_count() %>%
+    dplyr::ungroup() -> analytesInfo
+
+  analytesInfo %>%
+    dplyr::group_by( transition_group_id, filename, peak_group_rank  ) %>%
+    dplyr::filter( ifelse( n>6, ifelse(m_score==min(m_score), T, F), T ) ) %>%
+    dplyr::ungroup()-> analytesInfo
+  
+  analytesInfo$n <- NULL
+  
+  analytesInfo %>% dplyr::select( -product_mz, -transition_id, -detecting_transitions, -identifying_transitions) %>% unique() -> unique_analytesInfo
+
+  unique_analytesInfo %>% group_by( transition_group_id, filename, RT_Floored ) %>% dplyr::slice( -1 ) %>% dplyr::ungroup() %>% dplyr::select( feature_id ) -> remove_features_list
+  
+  analytesInfo %>%
+    dplyr::filter( !(feature_id %in% remove_features_list$feature_id) ) -> analytesInfo
+  
+  analytesInfo %>%
+    dplyr::group_by( transition_group_id, filename, RT_Floored ) %>%
+    dplyr::add_count() %>%
+    dplyr::ungroup() -> analytesInfo
+
+
+  analytesInfo$RT_Floored <- NULL
+  analytesInfo$n <- NULL
+  ## Convert FullPeptideNames to UniMod convention
+  analytesInfo$transition_group_id <- unlist(lapply( analytesInfo$transition_group_id, function( pep_char ) mstools::codenameTounimod( pep_char ) ))
+  ## Convert ids to character
+  class(analytesInfo$transition_id) <- as.character()
+  exec_time <- tictoc::toc(quiet = TRUE)
+  message( sprintf("[DIAlignR::fetchAnalytesInfo(R#67)] Extracting analyte feature information for %s took %s seconds", basename(filename), round(exec_time$toc - exec_time$tic, 3) ))
+  
+  return( analytesInfo )
 }
 
 
@@ -97,7 +160,8 @@ fetchAnalytesInfo <- function(oswName, maxFdrQuery, oswMerged,
 #' oswFiles[["run0"]][1,]
 #' @export
 getOswAnalytes <- function(dataPath, filenames, oswMerged = TRUE, analyteInGroupLabel = FALSE,
-                           maxFdrQuery = 0.05, runType  = "DIA_proteomics"){
+                           maxFdrQuery = 0.05, runType  = "DIA_proteomics",
+                           identifying = FALSE, identifying.transitionPEPfilter=0.6){
   oswFiles <- list()
   for(i in 1:nrow(filenames)){
     # Get a query to search against the osw files.
@@ -112,7 +176,8 @@ getOswAnalytes <- function(dataPath, filenames, oswMerged = TRUE, analyteInGroup
     # Generate a query.
     query <- getAnalytesQuery(maxFdrQuery = maxFdrQuery, oswMerged = oswMerged,
                       filename = filenames$filename[i], runType = runType,
-                      analyteInGroupLabel = analyteInGroupLabel)
+                      analyteInGroupLabel = analyteInGroupLabel,
+                      identifying = identifying, identifying.transitionPEPfilter=identifying.transitionPEPfilter)
     # Run query to get peptides, their coordinates and scores.
     oswAnalytes <- tryCatch(expr = DBI::dbGetQuery(con, statement = query),
                              finally = DBI::dbDisconnect(con))

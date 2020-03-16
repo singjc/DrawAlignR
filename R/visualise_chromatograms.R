@@ -22,10 +22,10 @@ getSingleAlignedChrom <- function(XIC_group, idx, t.ref){
   # Update intensities with aligned time indices.
   for(k in seq_along(XIC_group)){
     tmp_chrom_list <- list()
-    mutateInt <- XIC_group[[k]][idx, 2]
+    mutateInt <- XIC_group[[k]][[2]][idx]
     mutateInt <- zoo::na.locf(zoo::na.locf(mutateInt, na.rm = FALSE),fromLast = TRUE)
     #TODO: interpolate mutateT so that it can be plotted on x-axis.
-    mutateT <- mapIdxToTime(XIC_group[[1]][, "time"], idx)
+    mutateT <- mapIdxToTime(XIC_group[[1]][["time"]], idx)
     tmp_chrom_list[[ names(XIC_group[[k]])[1] ]] <- t.ref#c(1:length(mutateInt))
     
     tmp_chrom_list[[ names(XIC_group[[k]])[2] ]] <- mutateInt
@@ -225,7 +225,7 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
   
   
   
-  XICs.eXp.aligned <- getSingleAlignedChrom(XICs.eXp, idx = AlignedIndices[,"indexAligned.eXp"], t.ref)
+  XICs.eXp.aligned <- getSingleAlignedChrom(XIC_group = XICs.eXp, idx = AlignedIndices[,"indexAligned.eXp"], t.ref)
   
   ## Rename list using transition ids
   names(XICs.eXp.aligned) <- unlist(lapply(XICs.eXp.aligned, function(x){ gsub("^X*", "", names(x)[2]) }))

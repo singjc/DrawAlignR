@@ -22,14 +22,25 @@
 #' XIC_group <- extractXIC_group(mz, chromIndices, SgolayFiltOrd = 4, SgolayFiltLen = 13)
 #' }
 extractXIC_group <- function(mz, chromIndices, XICfilter = "sgolay", SgolayFiltOrd = 4, SgolayFiltLen = 9){
-  XIC_group <- lapply(seq_along(chromIndices), function(i) {
-    rawChrom <- mzR::chromatograms(mz, chromIndices[i])
-    # Savitzky-Golay filter to smooth chromatograms, filter order p = 3, filter length n = 13
-    if(XICfilter == "sgolay"){
-      rawChrom[,2] <- signal::sgolayfilt(rawChrom[,2], p = SgolayFiltOrd, n = SgolayFiltLen)
-    }
-    return(rawChrom)
-  })
+  if( any(class(mz)=="mzRpwiz") ){
+    XIC_group <- mclapply( seq_along(chromIndices), function(i) {
+      
+      rawChrom <- mzR::chromatograms(mz, chromIndices[i])
+      
+      # Savitzky-Golay filter to smooth chromatograms, filter order p = 3, filter length n = 13
+      if(XICfilter == "sgolay"){
+        rawChrom[,2] <- signal::sgolayfilt(rawChrom[,2], p = SgolayFiltOrd, n = SgolayFiltLen)
+      }
+      
+      return(rawChrom)
+    } )
+    
+  } else if ( is.data.frame(mz) ) { # TODO Need to add a better check.
+    XIC_group <- mstools::getChromatogramDataPoints_( filename = ".sqMass", chromIndices, id_type = "chromatogramIndex", name_time = "time", name_intensity = "paste0('X', data_row$FRAGMENT_ID)", mzPntrs = mz, SgolayFiltOrd = SgolayFiltOrd, SgolayFiltLen = SgolayFiltLen )
+    names(XIC_group) <- NULL
+  }
+  
+  
   return(XIC_group)
 }
 
@@ -128,7 +139,7 @@ getXICs4AlignObj <- function(dataPath, runs, oswFiles, analytes, XICfilter = "sg
 #' @export
 getXICs <- function(analytes, runs, dataPath = ".", maxFdrQuery = 1.0, XICfilter = "sgolay",
                     SgolayFiltOrd = 4, SgolayFiltLen = 9, runType = "DIA_proteomics",
-                    oswMerged = TRUE, nameCutPattern = "(.*)(/)(.*)", analyteInGroupLabel = FALSE, identifying = FALSE, mzPntrs=NULL){
+                    oswMerged = TRUE, nameCutPattern = "(.*)(/)(.*)", analyteInGroupLabel = FALSE, mzPntrs=NULL){
   if( (SgolayFiltLen %% 2) != 1){
     print("SgolayFiltLen can only be odd number")
     return(NULL)
@@ -136,18 +147,18 @@ getXICs <- function(analytes, runs, dataPath = ".", maxFdrQuery = 1.0, XICfilter
   # Get filenames from .merged.osw file and check if names are consistent between osw and mzML files.
   filenames <- getRunNames(dataPath, oswMerged, nameCutPattern)
   filenames <- filenames[filenames$runs %in% runs,]
-
+  
   # Get Chromatogram indices for each peptide in each run.
   oswFiles <- getOswFiles(dataPath, filenames, maxFdrQuery = maxFdrQuery, analyteFDR = 1.00,
-                         oswMerged = oswMerged, analytes = analytes, runType = runType,
-                         analyteInGroupLabel = analyteInGroupLabel, identifying = identifying, mzPntrs = mzPntrs)
+                          oswMerged = oswMerged, analytes = analytes, runType = runType,
+                          analyteInGroupLabel = analyteInGroupLabel)
   refAnalytes <- getAnalytesName(oswFiles, commonAnalytes = FALSE)
   analytesFound <- intersect(analytes, refAnalytes)
   analytesNotFound <- setdiff(analytes, analytesFound)
   if(length(analytesNotFound)>0){
     message("Analytes ", paste(analytesNotFound, ", "), "not found.")
   }
-
+  
   ####################### Get XICs ##########################################
   runs <- filenames$runs
   names(runs) <- rownames(filenames)

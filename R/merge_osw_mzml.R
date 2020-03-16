@@ -41,20 +41,18 @@ chromatogramIdAsInteger <- function(chromatogramHeader){
 #' @return Invisible NULL
 #' @seealso \code{\link{getOswFiles}}
 mergeOswAnalytes_ChromHeader <- function(oswAnalytes, chromHead, analyteFDR =  1.00, runType = "DIA_proteomics"){
-  tryCatch( expr = {
-    # TODO: Make sure that transition_id has same order across runs. IMO should be specified in query.
-    assign("oswAnalytes", dplyr::left_join(oswAnalytes, chromHead,
-                                           by = c("transition_id" = "chromatogramId")) %>%
-             dplyr::group_by(transition_group_id, peak_group_rank) %>%
-             dplyr::mutate(transition_ids = paste0(transition_id, collapse = ","),
-                           chromatogramIndex = paste0(chromatogramIndex, collapse = ",")) %>%
-             dplyr::ungroup() %>% dplyr::select(-transition_id) %>% dplyr::distinct(),
-           envir = parent.frame(n = 1))
-    invisible(NULL)
-  }, error = function(e){
-    message( sprintf("[DrawAlignR::merge_osw_mzml::mergeOswAnalytes_ChromHeader: There was an error that occured during function call: $s\n", e$message))
-  })
-  
+  # TODO: Make sure that transition_id has same order across runs. IMO should be specified in query.
+  assign("oswAnalytes", dplyr::left_join(oswAnalytes, chromHead,
+                                  by = c("transition_id" = "chromatogramId")) %>%
+    dplyr::group_by(transition_group_id, peak_group_rank, RT) %>%
+    dplyr::mutate(detecting_transitions = paste0(detecting_transitions, collapse = ","),
+                  identifying_transitions = paste0(identifying_transitions, collapse = ","),
+                  transition_ids = paste0(transition_id, collapse = ","),
+                  chromatogramIndex = paste0(chromatogramIndex, collapse = ","),
+                  product_mz = paste0(product_mz, collapse = ",") ) %>%
+    dplyr::ungroup() %>% dplyr::select(-transition_id) %>% dplyr::distinct(),
+    envir = parent.frame(n = 1))
+  invisible(NULL)
 }
 
 #' Get list of peptides and their chromatogram indices.
@@ -101,7 +99,7 @@ mergeOswAnalytes_ChromHeader <- function(oswAnalytes, chromHead, analyteFDR =  1
 #' @export
 getOswFiles <- function(dataPath, filenames, maxFdrQuery = 0.05, analyteFDR = 0.01, oswMerged = TRUE,
                          analytes = NULL, runType = "DIA_proteomics", analyteInGroupLabel = FALSE,
-                        identifying = FALSE, mzPntrs = NULL ){
+                        identifying = FALSE, identifying.transitionPEPfilter=0.6, mzPntrs = NULL ){
   oswFiles <- list()
   for(i in 1:nrow(filenames)){
     run <- rownames(filenames)[i]
@@ -112,12 +110,20 @@ getOswFiles <- function(dataPath, filenames, maxFdrQuery = 0.05, analyteFDR = 0.
     } else{
       oswName <- paste0(file.path(dataPath, "osw", filenames$runs[i]), ".osw")
     }
+    
+    ##***************************************************
+    ##  OSW File Checks
+    ##***************************************************
+    # TODO Add checks for OSW file
+    
     # Get transition indices for MS2 fragment-ions.
     oswAnalytes <- fetchAnalytesInfo(oswName, maxFdrQuery, oswMerged, analytes = analytes,
-                                     filename = filenames$filename[i], runType, analyteInGroupLabel, identifying = identifying)
+                                     filename = filenames$filename[i], runType, analyteInGroupLabel, 
+                                     identifying = identifying, identifying.transitionPEPfilter=identifying.transitionPEPfilter)
 
     # Get chromatogram indices from the header file.
     if(is.null(mzPntrs)){
+      ## TODO Fix this for sqMass giles
       mzmlName <- file.path(dataPath, "mzml", paste0(filenames$runs[i], ".chrom.mzML"))
       chromHead <- readChromatogramHeader(mzmlName)
     } else{

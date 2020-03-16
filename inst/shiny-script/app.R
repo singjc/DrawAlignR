@@ -123,6 +123,8 @@ server <- function(input, output, session) {
   brush <- NULL
   makeReactiveBinding("brush")
   
+# File Input Events -------------------------------------------------------
+  
   ## Observe Working Directory Input material switch.
   #   User may switch between using a working directory or
   #   supply each individual file
@@ -141,7 +143,9 @@ server <- function(input, output, session) {
       oswFile_Input_Button(  input, output, global, values, session  )
     }
   })
-  
+
+# Chromatogram File Cacheing Events ---------------------------------------
+
   ## If multiple chromatogram format types are found, check to see which fortmat user wants to use  
   observeEvent( input$chromType_Choice, {
     print(sprintf("Using chromtype: %s", input$chromType_Choice))
@@ -176,13 +180,41 @@ server <- function(input, output, session) {
               mzPntrs <- getmzPntrs( input, global  )
               ## Store mzPntrs container
               values$mzPntrs <- mzPntrs
-            }
+            } 
+            
           }
           
         } else if ( grepl(".*sqmass", input$chromType_Choice) ){
           if ( input$WorkingDirectoryInput  ) {
             global$chromFile <- global$foundChromFiles$sqmass
-            values$mzPntrs <- NULL
+            
+            ## Store chromatogram file run names
+            # values$chromnames <- gsub("\\.chrom\\.mzML$|\\.chrom\\.sqMass$", "", input$ChromatogramFile$name)
+            values$chromnames <- gsub("\\.chrom\\.mzML$|\\.chrom\\.sqMass$", "", names(global$chromFile))
+            ## Update Reference list
+            updateSelectizeInput( session, inputId = "Reference", choices = as.list(values$chromnames) )
+            ## Update Experiment list with first entry removed
+            updateSelectizeInput( session, inputId = "Experiment", choices = as.list(values$chromnames[-1]), selected = as.list(values$chromnames[-1])  )
+            ## Update n chroms input
+            n_runs_index <- c(seq(1, length(values$chromnames)))
+            names(n_runs_index) <-  paste( "Run ", seq(1, length((values$chromnames))), sep='')
+            run_index_map <- c(seq(1, length(values$chromnames)))
+            names(run_index_map) <- values$chromnames
+            values$run_index_map <- run_index_map
+            shiny::updateCheckboxGroupInput( session, inputId = "n_runs", choices = n_runs_index, selected = seq(1, length((values$chromnames))), inline = TRUE  )
+            
+            ######### Collect pointers for each mzML file. #######
+            ## Get filenames from osw files and check if names are consistent between osw and mzML files. ######
+            filenames <- DIAlignR::getRunNames( input$WorkingDirectory, oswMerged=TRUE, chrom_ext=".chrom.sqMass")
+            runs <- filenames$runs
+            names(runs) <- rownames(filenames)
+            # Collect all the pointers for each mzML file.
+            message("Collecting metadata from sqMass files.")
+            # mzPntrs <- getMZMLpointers(dataPath, runs)
+            mzPntrs <- getsqMassPntrs(dataPath=input$WorkingDirectory, runs)
+            message("Metadata is collected from sqMass files.")
+            
+            values$mzPntrs <- mzPntrs
           }
         } else {
           warning(sprintf("There was an issue with the chromType, selection is not a currently supported format: %s", input$chromType_Choice))
@@ -194,6 +226,9 @@ server <- function(input, output, session) {
     ) # End tryCatch
     
   })
+
+# Reference and Experiment Input Events -----------------------------------
+
   
   ## Observe Reference input
   observeEvent( input$Reference, {
@@ -203,8 +238,14 @@ server <- function(input, output, session) {
     values$Experiments_to_Align <- values$chromnames[ !(values$chromnames %in% input$Reference) ]
     ## Update Experiment list with first entry removed
     updateSelectizeInput( session, inputId = "Experiment", choices = as.list(values$Experiments_to_Align), selected = as.list(values$Experiments_to_Align) )
+    
+    ##TODO HERE
+    shiny::updateCheckboxGroupInput( session, inputId = "n_runs", choices = n_runs_index, selected = seq(1, length((values$chromnames))), inline = TRUE  )
+    
   })
-  
+
+# Peptide Selection Event -------------------------------------------------
+
   ## Observe Peptide Selection
   observeEvent( input$Mod, {
     
@@ -239,7 +280,9 @@ server <- function(input, output, session) {
     ) # End tryCatch
   } )
   
-  
+
+# Plot Settings Tab Events ------------------------------------------------
+
   ## transition_selection_list
   observeEvent( {input$yIdent
     input$bIdent }, {
@@ -265,9 +308,10 @@ server <- function(input, output, session) {
       ) # End tryCatch
     })
   
-  
+
+# Plot Control Events -----------------------------------------------------
+
   #Generate set of variable plots
-  
   output$plots <- renderUI({
     plot_output_list <- lapply(1:length(input$n_runs), function(i) {
       run_index <- input$n_runs[[i]]
@@ -311,7 +355,9 @@ server <- function(input, output, session) {
     link_zoom_ranges$x <- NULL
     link_zoom_ranges$y <- NULL
   })
-  
+
+# Main Observation Event --------------------------------------------------
+
   observeEvent( 
     {
       input$Mod
@@ -396,12 +442,12 @@ server <- function(input, output, session) {
                 # output$log <- renderText( paste(log, collapse = '\n') )
                 ## Old method using plotly
                   plotly::ggplotly( p = (out.plot.h), source = plotname, tooltip = c("x", "y", "text"), dynamicTicks = T ) %>%
-                    layout(title = list(text = paste0(out.plot.h$labels$title,
+                    plotly::layout(title = list( text = unique(paste0(out.plot.h$labels$title,
                                                       '<br>',
                                                       '<sup>',
                                                       gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', out.plot.h$labels$subtitle)),
-                                                      '</sup>'))) %>%
-                    event_register('plotly_brushing')
+                                                      '</sup>')) ) ) %>%
+                    plotly::event_register('plotly_brushing')
                 
                 # output[[plotname]] <- renderPlotly({
                 # 
@@ -472,14 +518,14 @@ server <- function(input, output, session) {
                 suppressWarnings(
                   AlignObjOutput <- DrawAlignR::getAlignObjs(analytes = analytes, runs = runs, dataPath = dataPath, refRun = input$Reference, 
                                                              analyteInGroupLabel = input$analyteInGroupLabel, identifying = input$identifying, 
-                                                             oswMerged = input$oswMerged, nameCutPattern = input$nameCutPattern,
+                                                             oswMerged = input$oswMerged, nameCutPattern = input$nameCutPattern, chrom_ext=".chrom.sqMass",
                                                              maxFdrQuery = input$maxFdrQuery, maxFdrLoess = input$maxFdrLoess, analyteFDR = input$analyteFDR, 
                                                              spanvalue = input$spanvalue,  normalization = input$normalization, simMeasure = input$simMeasure,
                                                              XICfilter = input$XICfilter, SgolayFiltOrd = input$SgolayFiltOrd, SgolayFiltLen = input$SgolayFiltLen,
                                                              goFactor = input$goFactor, geFactor = input$geFactor, cosAngleThresh = input$cosAngleThresh, OverlapAlignment = input$OverlapAlignment,
                                                              dotProdThresh = input$dotProdThresh, gapQuantile = input$gapQuantile, hardConstrain = input$hardConstrain, 
                                                              samples4gradient = input$samples4gradient,  samplingTime = input$samplingTime,  RSEdistFactor = input$RSEdistFactor, 
-                                                             objType = "light", mzPntrs = mzPntrs)
+                                                             objType = "light", mzPntrs = mzPntrs, runType = "DIA_Proteomics_ipf")
                 )
                 tictoc::toc()
                 cat("\n")

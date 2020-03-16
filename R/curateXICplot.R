@@ -135,7 +135,7 @@ curateXICplot <- function( pep,
     ## Get TRANSITION SCORES INFO TABLE  ##
     ##***********************************##
     if ( show_transition_scores ){
-      transition_dt <- getTransitionScores_( oswfile = in_osw, run_name = run_name, precursor_id = "", peptide_id = pep)
+      transition_dt <- mstools::getTransitionScores_( oswfile = in_osw, run_name = run_name, precursor_id = "", peptide_id = pep)
       # transition_dt_test <- getTransitionScores_( oswfile = in_osw, run_name = "chludwig_K150309_007b_SW_1_6", precursor_id = "", peptide_id = pep)
     } else {
       transition_dt <- NULL

@@ -11,18 +11,21 @@ RUN apt-get update && apt-get install -y \
     libcairo2-dev \
     libxt-dev \
     libssl-dev \
-    libssh2-1-dev
+    libssh2-1-dev \
+    libnetcdf-dev
     
 # install R packages required 
 # (change it dependeing on the packages you need)
 RUN R -e "install.packages('shiny', repos='http://cran.rstudio.com/')"
-RUN R -e "devtools::install_github('Roestlab/DrawAlignR')"
+RUN R -e "devtools::install_github('singjc/mstools')"
 
 # copy the app to the image
-COPY DrawAlignR.Rproj /srv/shiny-server/
-COPY /inst/shiny-script/app.R /srv/shiny-server/
-COPY R /srv/shiny-server/R
-s
+COPY ./DrawAlignR.Rproj /srv/shiny-server/
+COPY ./inst/shiny-script/app.R /srv/shiny-server/
+COPY ./inst/shiny-script/external /srv/shiny-server/external/
+COPY ./inst/shiny-script/www /srv/shiny-server/www/
+COPY ./R /srv/shiny-server/R
+COPY ./inst/extdata/Synthetic_Dilution_Phosphoproteomics/ /srv/shiny-server/data/
 
 # select port
 EXPOSE 3838
@@ -31,4 +34,4 @@ EXPOSE 3838
 RUN sudo chown -R shiny:shiny /srv/shiny-server
 
 # run app
-CMD ["/usr/bin/shiny-server.sh"]
+CMD ["R", "-e", "shiny::runApp('/srv/shiny-server/app.R', host='0.0.0.0', port=3838)"]
