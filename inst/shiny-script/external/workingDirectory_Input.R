@@ -24,7 +24,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
             } else {
               
               ### Create a reactive object to store working directory
-              dir <- reactive(input$interactiveWorkingDirectory)
+              dir <- reactive( req(is.list(input$interactiveWorkingDirectory)) )
               
               values$WorkingDirectory <- renderText({  
                 global$datapath

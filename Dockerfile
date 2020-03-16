@@ -17,7 +17,12 @@ RUN apt-get update && apt-get install -y \
 # install R packages required 
 # (change it dependeing on the packages you need)
 RUN R -e "install.packages('shiny', repos='http://cran.rstudio.com/')"
+RUN R -e "install.packages('shinyjs')"
+RUN R -e "install.packages('shinyBS')"
+RUN R -e "install.packages('shinyWidgets')"
+RUN R -e "install.packages('shinyFiles')"
 RUN R -e "devtools::install_github('singjc/mstools')"
+RUN R -e "devtools::install_github('singjc/DrawAlignR', ref='link_zooming')"
 
 # copy the app to the image
 COPY ./DrawAlignR.Rproj /srv/shiny-server/
