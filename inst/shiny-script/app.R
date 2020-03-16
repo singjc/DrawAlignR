@@ -106,7 +106,7 @@ ui <- fluidPage(
 # SERVER ------------------------------------------------------------------
 
 ## TODO: REMOVE THE LINE BELOW WHEN DEPLOYING STABLE VERSION
-lapply(list.files("../../R/", full.names = T), source )
+# lapply(list.files("../../R/", full.names = T), source )
 server <- function(input, output, session) {
   
   server_help_description_text(input, output, session)
@@ -130,6 +130,8 @@ server <- function(input, output, session) {
   #   supply each individual file
   observeEvent( input$WorkingDirectoryInput, {
     if ( input$WorkingDirectoryInput ){
+      cat("values$drives: ", values$drives, "\n", sep="")
+      cat("global$datapath: ", global$datapath, "\n", sep="")
       ## Observe interactive set working directory button
       workingDirectory_Input( input, output, global, values, session )
     } else {
