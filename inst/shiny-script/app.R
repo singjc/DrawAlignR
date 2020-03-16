@@ -130,7 +130,7 @@ server <- function(input, output, session) {
   #   supply each individual file
   observeEvent( input$WorkingDirectoryInput, {
     if ( input$WorkingDirectoryInput ){
-      cat("values$drives: ", values$drives, "\n", sep="")
+      cat("values$drives: ", names(values$drives()), "\n", sep="")
       cat("global$datapath: ", global$datapath, "\n", sep="")
       ## Observe interactive set working directory button
       workingDirectory_Input( input, output, global, values, session )
