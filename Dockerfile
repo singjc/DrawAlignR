@@ -22,8 +22,8 @@ RUN R -e "install.packages('shinyjs')"
 RUN R -e "install.packages('shinyBS')"
 RUN R -e "install.packages('shinyWidgets')"
 RUN R -e "install.packages('shinyFiles')"
-RUN R -e "devtools::install_github('singjc/mstools')"
-RUN R -e "devtools::install_github('singjc/DrawAlignR', ref='link_zooming', force=T)"
+RUN R -e "devtools::install_github('singjc/mstools', upgrade='never')"
+RUN R -e "devtools::install_github('singjc/DrawAlignR', ref='link_zooming', force=T, upgrade='never')"
 
 # copy the app to the image
 COPY ./DrawAlignR.Rproj /srv/shiny-server/
