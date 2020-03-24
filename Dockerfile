@@ -12,7 +12,8 @@ RUN apt-get update && apt-get install -y \
     libxt-dev \
     libssl-dev \
     libssh2-1-dev \
-    libnetcdf-dev
+    libnetcdf-dev &&\
+mkdir -p /var/lib/shiny-server/bookmarks/shiny
     
 # install R packages required 
 # (change it dependeing on the packages you need)
@@ -34,6 +35,9 @@ COPY ./inst/extdata/Synthetic_Dilution_Phosphoproteomics/ /srv/shiny-server/data
 
 # select port
 EXPOSE 3838
+
+# Make all app files readable
+RUN chmod -R +r /srv/shiny-server
 
 # allow permission
 RUN sudo chown -R shiny:shiny /srv/shiny-server
