@@ -14,7 +14,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
             roots <- c( getwd(), path.expand("~"), .Platform$file.sep, global$mostRecentDir )
             names(roots) <- c("Working Directory", "home", "root", "Recent Directory")
             roots <- c(roots, values$drives()) 
-            shinyDirChoose(input, 'interactiveWorkingDirectory', roots = roots, defaultRoot = 'Working Directory', defaultPath = .Platform$file.sep, session  )
+            shinyDirChoose(input, 'interactiveWorkingDirectory', roots = roots, defaultRoot = 'root', defaultPath = .Platform$file.sep, session  )
             if ( input$WorkingDirectory!="" ) {
               global$datapath <- normalizePath( input$WorkingDirectory )
               ## Get mapping of runs to filename
@@ -82,7 +82,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                 global$oswFile <- files_in_osw_dir
                 
                 ## Load OSW file
-                use_ipf_score <- DrawAlignR:::Score_IPF_Present( global$oswFile[[1]] )
+                use_ipf_score <- Score_IPF_Present( global$oswFile[[1]] )
                 tictoc::tic("Reading and Cacheing OSW File")
                 ### TODO : Need to make sure that this is extracting the correct information from the osw file when using the ipf scores
                 osw_df <- mstools::getOSWData_( oswfile=global$oswFile[[1]], decoy_filter = TRUE, ms2_score = TRUE, ipf_score =  use_ipf_score)

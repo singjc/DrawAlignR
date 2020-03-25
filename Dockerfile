@@ -22,25 +22,29 @@ RUN R -e "install.packages('shinyjs')"
 RUN R -e "install.packages('shinyBS')"
 RUN R -e "install.packages('shinyWidgets')"
 RUN R -e "install.packages('shinyFiles')"
+RUN R -e "install.packages('plotly')"
 RUN R -e "devtools::install_github('singjc/mstools', upgrade='never')"
-RUN R -e "devtools::install_github('singjc/DrawAlignR', ref='link_zooming', force=T, upgrade='never')"
+RUN R -e "devtools::install_github('shubham1637/DIAlignR', upgrade='never')"
+#RUN R -e "devtools::install_github('singjc/DrawAlignR', ref='link_zooming', force=T, upgrade='never')"
 
 # copy the app to the image
-COPY ./DrawAlignR.Rproj /srv/shiny-server/
-COPY ./inst/shiny-script/app.R /srv/shiny-server/
-COPY ./inst/shiny-script/external /srv/shiny-server/external/
-COPY ./inst/shiny-script/www /srv/shiny-server/www/
-COPY ./R /srv/shiny-server/R
-COPY ./inst/extdata/Synthetic_Dilution_Phosphoproteomics/ /srv/shiny-server/data/
+#COPY ./DrawAlignR.Rproj /srv/shiny-server/
+#COPY ./inst/shiny-script/app.R /srv/shiny-server/
+#COPY ./inst/shiny-script/external /srv/shiny-server/external/
+#COPY ./inst/shiny-script/www /srv/shiny-server/www/
+#COPY ./R /srv/shiny-server/R
+#COPY ./inst/extdata/Synthetic_Dilution_Phosphoproteomics/ /srv/shiny-server/data/
+
+COPY ./ /srv/shiny-server/DrawAlignR/
 
 # select port
 EXPOSE 3838
 
 # Make all app files readable
-RUN chmod -R +r /srv/shiny-server
+RUN chmod -R +r /srv/shiny-server/DrawAlignR/
 
 # allow permission
-RUN sudo chown -R shiny:shiny /srv/shiny-server
+RUN sudo chown -R shiny:shiny /srv/shiny-server/DrawAlignR/
 
 # run app
-CMD ["R", "-e", "shiny::runApp('/srv/shiny-server/app.R', host='0.0.0.0', port=3838)"]
+CMD ["R", "-e", "shiny::runApp('/srv/shiny-server/DrawAlignR/inst/shiny-script/app.R', host='0.0.0.0', port=3838)"]

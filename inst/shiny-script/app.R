@@ -59,7 +59,7 @@ library(DIAlignR)
 #   }
 #   results
 # }
-
+print(sprintf("The current wd is: %s", getwd()))
 print(list.files(recursive=T) )
 source( "external/uiTabs.R", local = TRUE )
 source( "external/server_help_description_text.R", local = TRUE )
@@ -74,7 +74,7 @@ ui <- fluidPage(
   
   useShinyjs(),  # Include shinyjs
   
-  titlePanel( title=div( img(src="DIAlignR-logo.jpg", width = 80, height = 80, align="top" ), ( HTML(sprintf("DrawAlignR <h6 style='display:inline'>Ver: %s</h6>", packageVersion("DrawAlignR"))) ) ) ),
+  titlePanel( title=div( img(src="DIAlignR-logo.jpg", width = 80, height = 80, align="top" ), ( HTML(sprintf("DrawAlignR <h6 style='display:inline'>Ver: %s</h6>", tryCatch(expr={ver<-packageVersion("DrawAlignR")}, error = function(e){ ver<-'0' }) )) ) ) ),
   sidebarLayout(
     sidebarPanel(
       tabsetPanel(
@@ -293,13 +293,13 @@ server <- function(input, output, session) {
         expr = {
           
           if ( input$yIdent!="" ){
-            values$transition_selection_list$y <- c(DrawAlignR:::text2numericInput(input$yIdent))
+            values$transition_selection_list$y <- c(text2numericInput(input$yIdent))
           } else {
             values$transition_selection_list$y <- NULL
           }
           
           if ( input$bIdent!="" ){
-            values$transition_selection_list$b <- c(DrawAlignR:::text2numericInput(input$bIdent))
+            values$transition_selection_list$b <- c(text2numericInput(input$bIdent))
           } else {
             values$transition_selection_list$b <- NULL
           }
@@ -432,7 +432,7 @@ server <- function(input, output, session) {
                 tictoc::toc()
               }, 
               error = function(e){
-                message(sprintf("[DrawAlignR::curateXICplot] There was the following error that occured during curateXICplot function call: %s\n", e$message))
+                message(sprintf("[curateXICplot] There was the following error that occured during curateXICplot function call: %s\n", e$message))
               }
             ) # End tryCatch
             
@@ -518,7 +518,7 @@ server <- function(input, output, session) {
                 # cat( sprintf( "Runs: %s\n", runs ) )
                 mzPntrs <- values$mzPntrs
                 suppressWarnings(
-                  AlignObjOutput <- DrawAlignR::getAlignObjs(analytes = analytes, runs = runs, dataPath = dataPath, refRun = input$Reference, 
+                  AlignObjOutput <- getAlignObjs(analytes = analytes, runs = runs, dataPath = dataPath, refRun = input$Reference, 
                                                              analyteInGroupLabel = input$analyteInGroupLabel, identifying = input$identifying, 
                                                              oswMerged = input$oswMerged, nameCutPattern = input$nameCutPattern, chrom_ext=".chrom.sqMass",
                                                              maxFdrQuery = input$maxFdrQuery, maxFdrLoess = input$maxFdrLoess, analyteFDR = input$analyteFDR, 
