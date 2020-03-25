@@ -106,7 +106,7 @@ ui <- fluidPage(
 # SERVER ------------------------------------------------------------------
 
 ## TODO: REMOVE THE LINE BELOW WHEN DEPLOYING STABLE VERSION
-# lapply(list.files("../../R/", full.names = T), source )
+ lapply(list.files("../../R/", full.names = T), source )
 server <- function(input, output, session) {
   
   server_help_description_text(input, output, session)
