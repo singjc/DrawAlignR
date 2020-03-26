@@ -76,7 +76,7 @@ getAlignObjs <- function(analytes, runs, dataPath = ".", alignType = "hybrid",
     return(NULL)
   }
   ##### Get filenames from osw files and check if names are consistent between osw and mzML files. ######
-  filenames <- DIAlignR::getRunNames(dataPath, oswMerged, nameCutPattern, chrom_ext=chrom_ext)
+  filenames <- getRunNames(dataPath, oswMerged, nameCutPattern, chrom_ext=chrom_ext)
   filenames <- filenames[filenames$runs %in% runs,]
   missingRun <- setdiff(runs, filenames$runs)
   if(length(missingRun) != 0){
