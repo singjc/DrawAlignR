@@ -15,6 +15,7 @@ getAlignObjs(
   identifying = FALSE,
   oswMerged = TRUE,
   nameCutPattern = "(.*)(/)(.*)",
+  chrom_ext = ".chrom.mzML",
   maxFdrQuery = 0.05,
   maxFdrLoess = 0.01,
   analyteFDR = 1,

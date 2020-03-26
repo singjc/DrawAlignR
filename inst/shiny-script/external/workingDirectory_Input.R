@@ -14,39 +14,49 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
             roots <- c( getwd(), path.expand("~"), .Platform$file.sep, global$mostRecentDir )
             names(roots) <- c("Working Directory", "home", "root", "Recent Directory")
             roots <- c(roots, values$drives()) 
-            shinyDirChoose(input, 'interactiveWorkingDirectory', roots = roots, defaultRoot = 'root', defaultPath = .Platform$file.sep, session  )
+            print("Roots Start")
+            print(roots)
+            print("Roots End")
+            shinyDirChoose(input=input, id='interactiveWorkingDirectory', roots = roots, defaultRoot = 'root', defaultPath = .Platform$file.sep, session=session  )
             if ( input$WorkingDirectory!="" ) {
+              print("Using test working directory input")
               global$datapath <- normalizePath( input$WorkingDirectory )
               ## Get mapping of runs to filename
-              values$runs_filename_mapping <- DIAlignR::getRunNames(global$datapath, oswMerged = TRUE, chrom_ext = ".chrom.mzML|.chrom.sqMass")
+              values$runs_filename_mapping <- getRunNames(global$datapath, oswMerged = TRUE, chrom_ext = ".chrom.mzML|.chrom.sqMass")
               ## Search working directory for osw file, mzml files, pqpfiles
               subDirs <- normalizePath( list.dirs( path = global$datapath, full.names = T, recursive = F ) )
             } else {
-              
+              print("Using interactive button working directory input")
               ### Create a reactive object to store working directory
-              dir <- reactive( req(is.list(input$interactiveWorkingDirectory)) )
-              
+              # dir <- reactive( req(is.list(input$interactiveWorkingDirectory)) )
+              dir <- reactive( input$interactiveWorkingDirectory )
               values$WorkingDirectory <- renderText({  
                 global$datapath
               })  
               
               if ( class(dir())[1]=='list' ){
                 ## Get root directory based on used choice, working directory, home or root
-                if ( dir()$root=='Working Directory' ){
-                  root_node <- dirname(getwd())
-                } else if ( dir()$root == 'home' ) {
-                  root_node <- path.expand("~")
-                } else {
-                  root_node <- .Platform$file.sep
-                }
+                # if ( dir()$root=='Working Directory' ){
+                #   root_node <- dirname(getwd())
+                # } else if ( dir()$root == 'home' ) {
+                #   root_node <- path.expand("~")
+                # } else {
+                #   root_node <- .Platform$file.sep
+                # }
+                root_node <- roots[ which( names(roots) %in% dir()$root ) ]
                 
-                print( dir() )
+                print( as.list(dir()) )
                 
                 ## Get full working directroy of user selected directory
                 global$datapath <- normalizePath( paste( normalizePath(root_node), file.path( paste( unlist(dir()$path[-1]), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep ) )
+                
+                print("global$datapath selected start")
                 print(global$datapath)
+                print(list.files(global$datapath, recursive = T))
+                print("global$datapath selected end")
+                
                 ## Get mapping of runs to filename
-                values$runs_filename_mapping <- DIAlignR::getRunNames(global$datapath, oswMerged = TRUE, chrom_ext = ".chrom.mzML|.chrom.sqMass")
+                values$runs_filename_mapping <- getRunNames(global$datapath, oswMerged = TRUE, chrom_ext = ".chrom.mzML|.chrom.sqMass")
                 ## Update global most recent directroy
                 global$mostRecentDir <- global$datapath
                 
@@ -64,6 +74,9 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
         ) # End tryCatch
         ## Search working directory for osw file, mzml files, pqpfiles
         subDirs <- normalizePath( list.dirs( path = global$datapath, full.names = T, recursive = F ) )
+        print("subDirs start")
+        print(subDirs)
+        print("subDirs end")
         ##*********************************
         ##    OSW Path Search
         ##*********************************
@@ -117,7 +130,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
             if ( "pqp" %in% basename(subDirs)  ) {
               target_subdir <- normalizePath( paste(global$datapath ,'pqp/',sep = .Platform$file.sep) )
               if ( any(grepl("\\.pqp", list.files(subDirs))) ){
-                ## Search for OSW folder
+                ## Search for PQP folder
                 find_file <- normalizePath( list.files( target_subdir, pattern = "*pqp$" ,full.names = T ) )
                 if ( length(find_file) > 1 ){
                   warning( sprintf("There were %s pqp files found, taking first file!!")) # TODO: If user uses non merged osw file?

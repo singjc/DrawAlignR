@@ -59,8 +59,7 @@ library(DIAlignR)
 #   }
 #   results
 # }
-print(sprintf("The current wd is: %s", getwd()))
-print(list.files(recursive=T) )
+
 source( "external/uiTabs.R", local = TRUE )
 source( "external/server_help_description_text.R", local = TRUE )
 source( "external/chromFile_Input_Button.R", local = TRUE )
@@ -122,6 +121,8 @@ server <- function(input, output, session) {
   link_zoom_ranges  <- reactiveValues(x = NULL, y = NULL)
   brush <- NULL
   makeReactiveBinding("brush")
+  n_runs_index <- NULL
+  out.plot.h <- NULL
   
 # File Input Events -------------------------------------------------------
   
@@ -130,6 +131,7 @@ server <- function(input, output, session) {
   #   supply each individual file
   observeEvent( input$WorkingDirectoryInput, {
     if ( input$WorkingDirectoryInput ){
+      print( as.list(input) )
       cat("values$drives: ", names(values$drives()), "\n", sep="")
       cat("global$datapath: ", global$datapath, "\n", sep="")
       ## Observe interactive set working directory button
@@ -207,7 +209,7 @@ server <- function(input, output, session) {
             
             ######### Collect pointers for each mzML file. #######
             ## Get filenames from osw files and check if names are consistent between osw and mzML files. ######
-            filenames <- DIAlignR::getRunNames( input$WorkingDirectory, oswMerged=TRUE, chrom_ext=".chrom.sqMass")
+            filenames <- getRunNames( input$WorkingDirectory, oswMerged=TRUE, chrom_ext=".chrom.sqMass")
             runs <- filenames$runs
             names(runs) <- rownames(filenames)
             # Collect all the pointers for each mzML file.
@@ -379,9 +381,8 @@ server <- function(input, output, session) {
             
             
             #If alignment is disabled, generate standard chromatogram plot.
-            
             ## Warning Handles
-            if (  all(unlist(lapply( unique(basename(global$chromFile)), function(x){!grepl(".*mzML$|.*sqMass$", x)}))) ) {
+            if (  all(unlist(lapply( unique(basename(unlist(global$chromFile))), function(x){!grepl(".*mzML$|.*sqMass$", x)}))) ) {
               warning('A Chromgatogram file(s) was not supplied or not found')
             } else if ( !grepl(".*pqp$", global$libFile) ){
               warning("A Library File was not supplied or not found")

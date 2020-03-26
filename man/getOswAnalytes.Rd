@@ -10,7 +10,9 @@ getOswAnalytes(
   oswMerged = TRUE,
   analyteInGroupLabel = FALSE,
   maxFdrQuery = 0.05,
-  runType = "DIA_proteomics"
+  runType = "DIA_proteomics",
+  identifying = FALSE,
+  identifying.transitionPEPfilter = 0.6
 )
 }
 \arguments{

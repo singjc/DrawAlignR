@@ -16,7 +16,6 @@ getXICs(
   oswMerged = TRUE,
   nameCutPattern = "(.*)(/)(.*)",
   analyteInGroupLabel = FALSE,
-  identifying = FALSE,
   mzPntrs = NULL
 )
 }
