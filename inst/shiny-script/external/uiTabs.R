@@ -67,7 +67,8 @@ GeneralSettingsTab <- shiny::tabPanel( title = "General Settings",
                                                                             shinyFiles::shinyDirButton( id = "interactiveWorkingDirectory", label = "",  title = "Set Working Directory (Location of mzML and osw folders)", icon = shiny::icon("folder") ),
                                                                             ## Text box for user to manually input working data path
                                                                             shiny::textInput(inputId = "WorkingDirectory", "Set Working Directory",
-                                                                                             placeholder = "Set Working Directory")
+                                                                                             placeholder = "Set Working Directory",
+                                                                                             value="/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/") # Debuggin with default value
                                                          ),
                                                          shiny::tags$style(type='text/css', "#interactiveWorkingDirectory { width:100%; margin-top: 50px;}"),
                                                          shiny::tags$style(type='text/css', "#WorkingDirectory { width:100%; margin-top: 25px;}")
@@ -149,7 +150,7 @@ GeneralSettingsTab <- shiny::tabPanel( title = "General Settings",
                                        )),
                                        
                                        #Plots to show
-                                       shiny::checkboxInput(inputId = "OriginalRTAnnotation", "Show Original Peak Annotation", value = FALSE, width = NULL),
+                                       shiny::checkboxInput(inputId = "OriginalRTAnnotation", "Show Original Peak Annotation", value = FALSE, width = NULL)
 
                                        
 ) # End of GeneralSettingsTab
@@ -293,5 +294,39 @@ PlottingSettingsTab <- shiny::tabPanel( title = "Plot Settings",
                                         
                                         ## ShowAllPkGrps
                                         shiny::checkboxInput('ShowAllPkGrps', 'Show All Peak-Groups', value = FALSE),
+                                        
+                                        ##### Plotly Options
+                                        
+                                        h4('Experimental/Developmental Settings'),
+                                        
+                                        'The settings below are still under active development. They may not react as expected.',
+                                        
+                                        br(),
+                                        
+                                        ## Display Bar
+                                        shiny::splitLayout(cellWidths = c("80%", "20%"),
+                                                           shinyWidgets::switchInput(inputId = 'plotly.displayModeBar', label = 'Menu Bar', value = TRUE),
+                                                           bsButton("plotly_displayModeBar_help", label = "?", size = "small")
+                                        ),
+                                        shiny::tags$style(type='text/css', "#plotly.displayModeBar { width:100%; margin-top: 0px;}"),
+                                        shiny::tags$style(type='text/css', "#plotly_displayModeBar_help { width:100%; margin-top: 0px;}"), 
+                                        
+                                        
+                                        ## Enanle Linked Zooming
+                                        shiny::splitLayout(cellWidths = c("80%", "20%"),
+                                                           shinyWidgets::switchInput(inputId = 'plotly.linkedzooming.x', label = 'Link Zoom X', value = TRUE),
+                                                           bsButton("plotly_linkedzooming_x_help", label = "?", size = "small")
+                                        ),
+                                        shiny::tags$style(type='text/css', "#plotly.linkedzooming.x { width:100%; margin-top: 0px;}"),
+                                        shiny::tags$style(type='text/css', "#plotly_linkedzooming_x_help { width:100%; margin-top: 0px;}"), 
+                                        
+                                        shiny::splitLayout(cellWidths = c("80%", "20%"),
+                                                           shinyWidgets::switchInput(inputId = 'plotly.linkedzooming.y', label = 'Link Zoom Y', value = TRUE),
+                                                           bsButton("plotly_linkedzooming_y_help", label = "?", size = "small")
+                                        ),
+                                        shiny::tags$style(type='text/css', "#plotly.linkedzooming.y { width:100%; margin-top: 0px;}"),
+                                        shiny::tags$style(type='text/css', "#plotly_linkedzooming_y_help { width:100%; margin-top: 0px;}"),
+                                        
+                                        extendShinyjs(text = "shinyjs.resetDoubleClick = function() { Shiny.onInputChange('plotly_doubleclick-plot_run_1', 'null'); }", functions = "resetDoubleClick" )
                                         
 ) # End of AlignmentSettingsTab

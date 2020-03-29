@@ -1,6 +1,10 @@
 ## quiets concerns of R CMD check re: the .'s that appear in pipelines
 if(getRversion() >= "2.15.1")  utils::globalVariables(c("."))
 
+getMaintainer <- function(email='justincsing@gmail.com', github='https://github.com/singjc/DrawAlignR'){
+  sprintf('%s (%s)\n', email, utils::URLdecode(github))
+}
+
 #' Fetch the reference run-index.
 #'
 #' Provides the reference run-index based on lowest m-score.
@@ -208,6 +212,27 @@ Score_IPF_Present <- function( oswFile ){
   }
   DBI::dbDisconnect( db )
   return( use_ipf_score )
+}
+
+#' Convert Variable to character including NULL
+#' @param x An object to coerce to character
+#' @return returns a character vector
+as.character.null <- function( x ){
+  
+  if ( is.null(x) ){
+    return( 'NULL' )
+  } else {
+    return( as.character( x ) )
+  }
+  
+}
+
+#' Convert list object to printable character vectory
+#' @param list_obj A list object to coerce to character
+#' @param collapse A character vector to collapse characters on
+#' @return returns a character vector
+listTostring <- function( list_obj, collapse = '\n' ){
+  paste( paste(names(list_obj), list_obj, sep=' = '), collapse = collapse )
 }
 
 testAlignObj <- function(analyteInGroupLabel = FALSE){

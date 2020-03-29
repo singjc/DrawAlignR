@@ -57,8 +57,6 @@ fetchAnalytesInfo <- function(oswName, maxFdrQuery, oswMerged,
   # If analysing IPF results, check for SCORE_IPF table
   if ( runType=="DIA_Proteomics_ipf" ) check_sqlite_table( conn=con, table="SCORE_IPF", msg="[DIAlignR::fetchAnalytesInfo:::check_sqlite_table]")
   
-  if ( runType=="DIA_Proteomics_ipf" & !is.null(analytes) ) analytes <- mstools::unimodTocodename( analytes )
-  
   # Generate a query.
   ## TODO: Add fitlers for Identifying transitions at given PEP
   query <- getQuery(maxFdrQuery, oswMerged, analytes = analytes,
@@ -97,7 +95,7 @@ fetchAnalytesInfo <- function(oswName, maxFdrQuery, oswMerged,
   
   analytesInfo$n <- NULL
   
-  analytesInfo %>% dplyr::select( -product_mz, -transition_id, -detecting_transitions, -identifying_transitions) %>% unique() -> unique_analytesInfo
+  analytesInfo %>% dplyr::select( -dplyr::contains("product_mz"), -transition_id, -detecting_transitions, -identifying_transitions) %>% unique() -> unique_analytesInfo
 
   unique_analytesInfo %>% group_by( transition_group_id, filename, RT_Floored ) %>% dplyr::slice( -1 ) %>% dplyr::ungroup() %>% dplyr::select( feature_id ) -> remove_features_list
   
@@ -112,8 +110,6 @@ fetchAnalytesInfo <- function(oswName, maxFdrQuery, oswMerged,
 
   analytesInfo$RT_Floored <- NULL
   analytesInfo$n <- NULL
-  ## Convert FullPeptideNames to UniMod convention
-  analytesInfo$transition_group_id <- unlist(lapply( analytesInfo$transition_group_id, function( pep_char ) mstools::codenameTounimod( pep_char ) ))
   ## Convert ids to character
   class(analytesInfo$transition_id) <- as.character()
   exec_time <- tictoc::toc(quiet = TRUE)

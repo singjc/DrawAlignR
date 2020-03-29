@@ -11,12 +11,11 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
         ##*********************************
         tryCatch(
           expr = {
+            ## Define Roots
             roots <- c( getwd(), path.expand("~"), .Platform$file.sep, global$mostRecentDir )
             names(roots) <- c("Working Directory", "home", "root", "Recent Directory")
             roots <- c(roots, values$drives()) 
-            print("Roots Start")
-            print(roots)
-            print("Roots End")
+            ## Get working directory contain data files
             shinyDirChoose(input=input, id='interactiveWorkingDirectory', roots = roots, defaultRoot = 'root', defaultPath = .Platform$file.sep, session=session  )
             if ( input$WorkingDirectory!="" ) {
               print("Using test working directory input")
@@ -36,24 +35,9 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
               
               if ( class(dir())[1]=='list' ){
                 ## Get root directory based on used choice, working directory, home or root
-                # if ( dir()$root=='Working Directory' ){
-                #   root_node <- dirname(getwd())
-                # } else if ( dir()$root == 'home' ) {
-                #   root_node <- path.expand("~")
-                # } else {
-                #   root_node <- .Platform$file.sep
-                # }
                 root_node <- roots[ which( names(roots) %in% dir()$root ) ]
-                
-                print( as.list(dir()) )
-                
                 ## Get full working directroy of user selected directory
                 global$datapath <- normalizePath( paste( normalizePath(root_node), file.path( paste( unlist(dir()$path[-1]), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep ) )
-                
-                print("global$datapath selected start")
-                print(global$datapath)
-                print(list.files(global$datapath, recursive = T))
-                print("global$datapath selected end")
                 
                 ## Get mapping of runs to filename
                 values$runs_filename_mapping <- getRunNames(global$datapath, oswMerged = TRUE, chrom_ext = ".chrom.mzML|.chrom.sqMass")
@@ -74,9 +58,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
         ) # End tryCatch
         ## Search working directory for osw file, mzml files, pqpfiles
         subDirs <- normalizePath( list.dirs( path = global$datapath, full.names = T, recursive = F ) )
-        print("subDirs start")
-        print(subDirs)
-        print("subDirs end")
+
         ##*********************************
         ##    OSW Path Search
         ##*********************************

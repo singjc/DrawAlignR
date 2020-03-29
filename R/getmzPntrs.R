@@ -2,14 +2,14 @@
 #' @param input A shiny input variable that contains Working Directory Information
 #' @param global A list variable containing paths to chromatogram files
 #' @return (A list of mzRpwiz)
-getmzPntrs <- function( input, global  ){
+getmzPntrs <- function( input, global, progress=FALSE  ){
   
   ##*******************************
   ## Pre-Load mzML Files
   ##*******************************
   
   ## Get filenames from osw files and check if names are consistent between osw and mzML files. ######
-  filenames <- DIAlignR::getRunNames( input$WorkingDirectory, oswMerged=TRUE)
+  filenames <- getRunNames( input$WorkingDirectory, oswMerged=TRUE)
   # runs <- c(input$Reference, gsub('...........$', '', input$ChromatogramFile[,'name']))
   # filenames <- filenames[filenames$runs %in% runs,]
   filenames <- filenames[grepl(paste(filenames$runs, collapse = "|"), names(global$chromFile)),]
@@ -31,6 +31,10 @@ getmzPntrs <- function( input, global  ){
     mzPntrs[[run]] <- list()
     mzPntrs[[run]]$mz <- mz
     mzPntrs[[run]]$chromHead <- chromHead
+    ## Progress counter for visual pop-up
+    if( progress ){
+      incProgress(1/length(filenames$runs))
+    }
       },
     error = function(e){
       message(sprintf("[getmzPntrs] There was an issue cacheing %s, skipping...: %s\n", current_filename, e$message))

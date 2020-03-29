@@ -3,8 +3,12 @@ chromFile_Input_Button <- function( input, output, global, values, session ){
   observeEvent( input$ChromatogramFile, {
     tryCatch(
       expr = {
+        ## Define Roots
+        roots <- c( getwd(), path.expand("~"), .Platform$file.sep, global$mostRecentDir )
+        names(roots) <- c("Working Directory", "home", "root", "Recent Directory")
+        roots <- c(roots, values$drives()) 
         ## ChromatogramFile
-        shinyFileChoose(input, 'ChromatogramFile', roots = c( `Working Directory` =  "../", home = normalizePath("~"), root = .Platform$file.sep, `Recent Directory` = global$mostRecentDir ), defaultRoot = 'Recent Directory', defaultPath = .Platform$file.sep )
+        shinyFileChoose(input, 'ChromatogramFile', roots = roots, defaultRoot = 'root', defaultPath = .Platform$file.sep )
         ### Create a reactive object to store ChromatogramFile
         chromFile <- reactive(input$ChromatogramFile)
         values$ChromatogramFile <- renderText({  
@@ -12,15 +16,7 @@ chromFile_Input_Button <- function( input, output, global, values, session ){
         }) 
         if ( class(chromFile())[1]=='list' ){
           ## Get root directory based on used choice, working directory, home or root
-          if ( chromFile()$root=='Working Directory' ){
-            root_node <- dirname(getwd())
-          } else if ( chromFile()$root == 'home' ) {
-            root_node <- path.expand("~")
-          } else if ( chromFile()$root=="Recent Directory" ) {
-            root_node <- global$mostRecentDir
-          } else {
-            root_node <- .Platform$file.sep
-          }
+          root_node <- roots[ which( names(roots) %in% chromFile()$root ) ]
           ## Get chromFile working directroy of user selected directory
           global$chromFile <- lapply( chromFile()$files, function(x){ normalizePath( paste( root_node, file.path( paste( unlist(x), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep ) ) }) 
           
@@ -48,15 +44,37 @@ chromFile_Input_Button <- function( input, output, global, values, session ){
         ## Get File Extension Type
         # fileType <- gsub( '.*\\.', '', input$ChromatogramFile$name)
         fileType <- unique(gsub( ".*\\.", "", global$chromFile))
-        if ( fileType=='mzML' | fileType=='mzML.gz'){
+        if ( tolower(fileType)=='mzml' | tolower(fileType)=='mzml.gz' ){
           ##*******************************
           ## Pre-Load mzML Files
           ##*******************************
-          message("Cacheing mz objects")
-          mzPntrs <- getmzPntrs( input, global  )
+          output$bar <- renderPlot({
+            withProgress(message = sprintf('Cacheing %s mzML Chromatogram File(s)...', length(n_runs_index)),
+                         detail = 'This might take a while for large chromatogram files...', value = 0, {
+                           mzPntrs <- getmzPntrs( input, global, progress=TRUE  )
+                         })
+          })
           ## Store mzPntrs container
           values$mzPntrs <- mzPntrs
+        } else if ( tolower(fileType)=='sqmass' ){
+          ##*******************************
+          ## Pre-Load sqMass Files
+          ##*******************************
+          ## Get filenames from osw files and check if names are consistent between osw and mzML files. 
+          filenames <- getRunNames( input$WorkingDirectory, oswMerged=TRUE, chrom_ext=".chrom.sqMass")
+          runs <- filenames$runs
+          names(runs) <- rownames(filenames)
+          output$bar <- renderPlot({
+            withProgress(message = sprintf('Cacheing %s mzML Chromatogram File(s)...', length(n_runs_index)),
+                         detail = 'This might take a while for large chromatogram files...', value = 0, {
+                           mzPntrs <- getsqMassPntrs(dataPath=input$WorkingDirectory, runs)
+                         })
+          })
+          values$mzPntrs <- mzPntrs
+        } else {
+          warning( sprintf("There was an unknown chromtagoram file format: %s. Could not cache data of this type. Email or submit any issue to %s.", fileType, getMaintainer() ))
         }
+        
         
       },
       error = function(e){

@@ -3,9 +3,12 @@ oswFile_Input_Button <- function(  input, output, global, values, session  ) {
     
     tryCatch(
       expr = {
-        
+        ## Define Roots
+        roots <- c( getwd(), path.expand("~"), .Platform$file.sep, global$mostRecentDir )
+        names(roots) <- c("Working Directory", "home", "root", "Recent Directory")
+        roots <- c(roots, values$drives()) 
         ## OSWFile
-        shinyFileChoose(input, 'OSWFile', roots = c( `Working Directory` =  "../", home = normalizePath("~"), root = .Platform$file.sep, `Recent Directory` = global$mostRecentDir  ), defaultRoot = 'Recent Directory', defaultPath = .Platform$file.sep  )
+        shinyFileChoose(input, 'OSWFile', roots = roots, defaultRoot = 'root', defaultPath = .Platform$file.sep  )
         ### Create a reactive object to store OSWFile
         oswFile <- reactive(input$OSWFile)
         
@@ -15,20 +18,10 @@ oswFile_Input_Button <- function(  input, output, global, values, session  ) {
         
         if ( class(oswFile())[1]=='list' ){
           ## Get root directory based on used choice, working directory, home or root
-          if ( oswFile()$root=='Working Directory' ){
-            root_node <- dirname(getwd())
-          } else if ( oswFile()$root == 'home' ) {
-            root_node <- path.expand("~")
-          } else if ( oswFile()$root=="Recent Directory" ) {
-            root_node <- global$mostRecentDir
-          } else {
-            root_node <- .Platform$file.sep
-          }
-          print(global$oswFile)
+          root_node <- roots[ which( names(roots) %in% oswFile()$root ) ]
           ## Get oswFile working directroy of user selected directory
           global$oswFile <- lapply( oswFile()$files, function(x){ paste( root_node, file.path( paste( unlist(x), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep ) }) 
           names(global$oswFile) <- lapply(global$oswFile, basename)
-          print(global$oswFile)
           ## Update global most recent directroy
           global$mostRecentDir <- dirname( dirname( global$oswFile[[1]] ) )
           ## Load OSW file
@@ -40,7 +33,6 @@ oswFile_Input_Button <- function(  input, output, global, values, session  ) {
             dplyr::filter( !is.na(m_score_filter_var)) -> osw_df
           values$osw_df <- osw_df
           tictoc::toc()
-          print(osw_df)
           if ( dim(values$lib_df)[1]==0){
             ## Get list of unique modified peptides
             uni_peptide_list <- as.list(unique( osw_df$FullPeptideName ) )

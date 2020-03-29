@@ -1,4 +1,6 @@
 server_help_description_text <- function( input, output, session ){
+# General Settings Tab ----------------------------------------------------
+  
   ## popover help text for working directory/ individual file button switch toggle
   addPopover(session = session, 
              id = "WorkingDirectoryInput_help", 
@@ -18,4 +20,21 @@ server_help_description_text <- function( input, output, session ){
              title = "Select a merged OSW results file", 
              content = paste0("<p>You can supply several chromatogram files using the *OSW Path button*. Accepted formats are: osw.</p><p> If you have an alternative format you would like to use, submit a feature request at Roestlab/DrawAlignR.</p>"), trigger = 'click') 
   
+
+# Plot Settings Tab -------------------------------------------------------
+
+  ## popover help text for chromatogram file inpit
+  addPopover(session = session, id = "plotly_displayModeBar_help", 
+             title = "Enable Menu Bar Above Plot", 
+             content = paste0("<p>Do you want to display the menu bar above plot?</p>"), trigger = 'click')  
+  
+  ## popover help text for chromatogram file inpit
+  addPopover(session = session, id = "plotly_linkedzooming_x_help", 
+             title = "Enable x-axis linked zooming", 
+             content = paste0("<p>Enable linked x-axis zooming across all plots.</p>"), trigger = 'click')  
+  
+  ## popover help text for chromatogram file inpit
+  addPopover(session = session, id = "plotly_linkedzooming_y_help", 
+             title = "Enable y-axis linked zooming", 
+             content = paste0("<p>Enable linked y-axis zooming across all plots.</p>"), trigger = 'click')  
 }
