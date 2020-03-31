@@ -68,7 +68,7 @@ GeneralSettingsTab <- shiny::tabPanel( title = "General Settings",
                                                                             ## Text box for user to manually input working data path
                                                                             shiny::textInput(inputId = "WorkingDirectory", "Set Working Directory",
                                                                                              placeholder = "Set Working Directory",
-                                                                                             value="/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR/inst/extdata/Synthetic_Dilution_Phosphoproteomics/") # Debuggin with default value
+                                                                                             value="") # Debuggin with default value
                                                          ),
                                                          shiny::tags$style(type='text/css', "#interactiveWorkingDirectory { width:100%; margin-top: 50px;}"),
                                                          shiny::tags$style(type='text/css', "#WorkingDirectory { width:100%; margin-top: 25px;}")

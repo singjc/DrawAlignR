@@ -674,7 +674,7 @@ server <- function(input, output, session) {
         for ( i in input$Experiment ) {
           local({
           
-          print("Start Experiment Alignment")
+          # print("Start Experiment Alignment")
           # print(paste("Current Exp: ", i, sep=""))
           
           # Define Experiment_i
