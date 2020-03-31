@@ -80,7 +80,13 @@ ui <- fluidPage(
     
     mainPanel(
       verbatimTextOutput("brushing"),
-      uiOutput("plots"),
+      
+      # Output: Tabset with Chromatogram Plots, Path Plots and Tables
+      tabsetPanel(type = "tabs", id="output_tabs",
+                  tabPanel( "chromPlot", uiOutput("plots") ),
+                  tabPanel( "pathPlot", uiOutput("pathplots") ),
+                  tabPanel( "oswTable", uiOutput("oswtables" ))
+      ),
       ## Cacheing Progress Bar
       plotOutput("bar"), 
       
@@ -141,6 +147,15 @@ server <- function(input, output, session) {
   # link_zoom_range_current <- reactiveValues(`xaxis.range[0]`=NULL, `xaxis.range[1]`=NULL, `yaxis.range[0]`=NULL, `yaxis.range[1]`=NULL)
   # link_zoom_range_current <- reactiveValues()
   # link_zoom_ranges <- list(`xaxis.range[0]`=1650, `xaxis.range[1]`=1900, `yaxis.range[0]`=0, `yaxis.range[1]`=15000)
+  
+  
+  observe( {
+    if (input$Align==TRUE){
+      showTab(inputId = "output_tabs", target = "pathPlot")
+    } else {
+      hideTab(inputId = "output_tabs", target = "pathPlot")
+    }
+  })
   
   # File Input Events -------------------------------------------------------
   
@@ -395,6 +410,32 @@ server <- function(input, output, session) {
       do.call(tagList, plot_output_list)
       
     })
+    
+    #Generate set of variable plots for path plots
+    output$pathplots <- renderUI({
+      
+      path_plot_output_list <- lapply(1:length(input$n_runs), function(i) {
+        run_index <- input$n_runs[[i]]
+        
+        path_plotname <- paste("pathplot_run_", run_index, sep="")
+        message(sprintf("Creating Path Plot: %s\n", path_plotname))
+        # plotOutput(plotname,
+        #            dblclick = "link_zoom_dblclick",
+        #            brush = brushOpts(
+        #              id = "link_zoom_brush",
+        #              resetOnNew = TRUE
+        #            ),
+        #            hover = hoverOpts(
+        #              id = paste0(plotname, "_hover")
+        #            )
+        # ) # End of plotlyOutput
+        plotlyOutput(path_plotname)
+        
+      })
+      do.call(tagList, path_plot_output_list)
+      
+    })
+    
   })
   
   
@@ -420,7 +461,26 @@ server <- function(input, output, session) {
     link_zoom_ranges$y <- NULL
   })
   
-  # observeEvent()
+
+  # oswTable Output ---------------------------------------------------------
+
+  observeEvent(input$n_runs,{
+    #Generate set of variable oswtables
+    output$oswtables <- renderUI({
+      
+      datatable_output_list <- lapply(1:length(input$n_runs), function(i) {
+        run_index <- input$n_runs[[i]]
+        
+        tablename <- paste("oswtable_run_", run_index, sep="")
+        message(sprintf("Creating osw table: %s\n", tablename))
+      
+        DT::dataTableOutput(tablename)
+        
+      })
+      do.call(tagList, datatable_output_list)
+      
+    })
+  })
   
   # Main Observation Event --------------------------------------------------
   
@@ -428,6 +488,7 @@ server <- function(input, output, session) {
     {
       input$Mod
       input$Align 
+      input$refreshAlign
     }, {
       if ( !(input$Align)  ){
         if ( !is.null(input$n_runs) ) {
@@ -534,6 +595,9 @@ server <- function(input, output, session) {
         for ( i in seq(1,length(input$n_runs)) ) {
           local({
             
+            ##********************************************************
+            ##  Chromatogram Plot Output
+            ##********************************************************
             run_index <- input$n_runs[[i]]
             plotname <- paste("plot_run_", run_index, sep="")
             
@@ -561,6 +625,24 @@ server <- function(input, output, session) {
             
             ## Get zoom events and unzoom events for linked zooming
             linkZoomEvent( input, output, values, global, session, plotname )
+            
+            
+            
+            ##********************************************************
+            ##  oswTable Output
+            ##********************************************************
+            ## Get Table tag id            
+            tablename <- paste("oswtable_run_", run_index, sep="")
+            ## Get current filename to filter table
+            ms_file_runname <- values$runs_filename_mapping$filename[ values$runs_filename_mapping$runs %in% gsub("\\.\\w+", "", basename(global$chromFile[[i]])) ]
+            ## Render Table            
+            output[[tablename]] <- DT::renderDataTable(
+              values$osw_df %>%
+                dplyr::filter( FullPeptideName==input$Mod & Charge==input$Charge ) %>%
+                dplyr::mutate( filename = basename(filename) ) %>%
+                dplyr::filter( filename== basename(ms_file_runname) ) %>%
+              dplyr::select( "filename", "Charge", "mz", "Intensity", "RT", "assay_rt", "leftWidth", "rightWidth", "ms2_pep", "peak_group_rank", "d_score", dplyr::contains("ms2_m_score"), "m_score", dplyr::contains("original_assay") ) 
+            )
             
           }) # End Local
         } # End for
@@ -608,7 +690,7 @@ server <- function(input, output, session) {
                                                  goFactor = input$goFactor, geFactor = input$geFactor, cosAngleThresh = input$cosAngleThresh, OverlapAlignment = input$OverlapAlignment,
                                                  dotProdThresh = input$dotProdThresh, gapQuantile = input$gapQuantile, hardConstrain = input$hardConstrain, 
                                                  samples4gradient = input$samples4gradient,  samplingTime = input$samplingTime,  RSEdistFactor = input$RSEdistFactor, 
-                                                 objType = "light", mzPntrs = values$mzPntrs, runType = input$runType)
+                                                 objType = "medium ", mzPntrs = values$mzPntrs, runType = input$runType)
                 # )
                 tictoc::toc()
                 cat("\n")
@@ -649,11 +731,22 @@ server <- function(input, output, session) {
                 cat( sprintf( "Names in AlignOPObjs: %s\n", names(values$AlignObj_List) ) )
                 ## Generate Plot
                 if ( class(values$AlignObj_List[[current_experiment]])!= "character" ){
-                  k <- plotAlignedAnalytes(AlignObjOutput = values$AlignObj_List[[current_experiment]], DrawAlignR = T, annotatePeak = T, annotateOrgPeak = input$OriginalRTAnnotation, global = global, input = input)
+                  alignedChromsPlot <- plotAlignedAnalytes(AlignObjOutput = values$AlignObj_List[[current_experiment]], DrawAlignR = T, annotatePeak = T, annotateOrgPeak = input$OriginalRTAnnotation, global = global, input = input)
+                  alignmentPathPlot <- plotAlignmentPath( AlignObjOutput = values$AlignObj_List[[current_experiment]], title = current_experiment )
                 } else {
                   text <- sprintf("There was an issue while performing alignment.\nYou most likely need to adjust one of the alignment settings.\n The following error occured: %s",  values$AlignObj_List[[current_experiment]])
-                  k <- list()
-                  k$peXpA <- ggplot() +
+                  alignedChromsPlot <- list()
+                  alignedChromsPlot$peXpA <- ggplot() +
+                    annotate( "text", x = 4, y = 25, size = 8, label = text ) +
+                    ggtitle( sprintf("Run: %s", current_experiment) ) +
+                    theme_bw() + 
+                    theme( panel.grid.major = element_blank(),
+                           panel.grid.minor = element_blank(),
+                           axis.title = element_blank(),
+                           axis.text = element_blank()
+                    )
+                  
+                  alignmentPathPlot <- ggplot() +
                     annotate( "text", x = 4, y = 25, size = 8, label = text ) +
                     ggtitle( sprintf("Run: %s", current_experiment) ) +
                     theme_bw() + 
@@ -675,11 +768,11 @@ server <- function(input, output, session) {
                     cat(sprintf("Plotname: %s for run: %s\n", plotname, input$Reference))
                     output[[ plotname ]] <- renderPlotly({
 
-                      pt1 <- plotly::ggplotly( (k$prefU), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
-                        layout(title = list(text = paste0(k$prefU$labels$title,
+                      pt1 <- plotly::ggplotly( (alignedChromsPlot$prefU), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
+                        layout(title = list(text = paste0(alignedChromsPlot$prefU$labels$title,
                                                           '<br>',
                                                           '<sup>',
-                                                          gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', k$prefU$labels$subtitle)),
+                                                          gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', alignedChromsPlot$prefU$labels$subtitle)),
                                                           '</sup>')))
 
 
@@ -687,7 +780,7 @@ server <- function(input, output, session) {
                     
                     # output[[ plotname ]] <- renderPlot({
                     #   
-                    #   k$prefU +
+                    #   alignedChromsPlot$prefU +
                     #     ggplot2::coord_cartesian(xlim = link_zoom_ranges$x, ylim = link_zoom_ranges$y, expand = FALSE)
                     # }) # End renderPlotly
                     
@@ -711,19 +804,32 @@ server <- function(input, output, session) {
                   cat(sprintf("Plotname: %s for run: %s\n", plotname, current_experiment))
                   output[[ plotname ]] <- renderPlotly({
                     
-                    pt3 <- plotly::ggplotly( (k$peXpA), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
-                      layout(title = list(text = paste0(k$peXpA$labels$title,
+                    pt3 <- plotly::ggplotly( (alignedChromsPlot$peXpA), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
+                      layout(title = list(text = paste0(alignedChromsPlot$peXpA$labels$title,
                                                         '<br>',
                                                         '<sup>',
-                                                        gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', k$peXpA$labels$subtitle)),
+                                                        gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', alignedChromsPlot$peXpA$labels$subtitle)),
                                                         '</sup>')))
                     
-                    # k$peXpA +
+                    # alignedChromsPlot$peXpA +
                     #   ggplot2::coord_cartesian(xlim = link_zoom_ranges$x, ylim = link_zoom_ranges$y, expand = FALSE)
+                    
+                    
                     
                     
                   }) # End renderPlotly
                   cat(sprintf("Successfully Plotted Plotname: %s for run: %s\n", plotname, current_experiment))
+                  
+                  path_plotname <- paste("pathplot_run_", run_index, sep="")
+                  cat(sprintf("Path Plotname: %s for run: %s\n", path_plotname, current_experiment))
+                  output[[ path_plotname ]] <- renderPlotly({
+                    
+                    pt3 <- plotly::ggplotly( (alignmentPathPlot), tooltip = c("all"), dynamicTicks = T)
+                    
+
+                  }) # End renderPlotly
+                  cat(sprintf("Successfully Plotted Path Plotname: %s for run: %s\n", path_plotname, current_experiment))
+                  
                   # }) # End local
                 }
                 

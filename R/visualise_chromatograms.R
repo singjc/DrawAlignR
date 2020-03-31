@@ -500,14 +500,27 @@ plotAlignedAnalytes <- function(AlignObjOutput, plotType = "All", DrawAlignR = F
 #'  objType = "medium")
 #' plotAlignmentPath(AlignObjOutput)
 #' @export
-plotAlignmentPath <- function(AlignObjOutput){
+plotAlignmentPath <- function(AlignObjOutput, title=NULL){
   Alignobj <- AlignObjOutput[[1]][[1]]
   analyte <- names(AlignObjOutput)[1]
   s <- Alignobj@s
   Path <- Alignobj@path[2:nrow(Alignobj@path), 2:ncol(Alignobj@path)]
-  lattice::levelplot(s, axes = TRUE, xlab = "ref index", ylab = "eXp index",
-                     main = paste0("Hybrid alignment through the similarity matrix\n for ",
-                                   analyte), fontsize = 7) +
-    latticeExtra::as.layer(lattice::levelplot(Path, col.regions = c("transparent", "green"),
-                                              alpha = 1, axes = FALSE))
+  # lattice::levelplot(s, axes = TRUE, xlab = "ref index", ylab = "eXp index",
+  #                    main = paste0("Hybrid alignment through the similarity matrix\n for ",
+  #                                  analyte), fontsize = 7) +
+  #   latticeExtra::as.layer(lattice::levelplot(Path, col.regions = c("transparent", "green"),
+  #                                             alpha = 1, axes = FALSE))
+  
+  Weight_dt <- data.table::melt( s )
+  Path_dt <- data.table::melt( Path )
+  
+  ggplot() +
+    geom_tile(data=Weight_dt, aes(Var1, Var2, fill = value)) + 
+    geom_contour(data=Weight_dt, aes(Var1, Var2, z = value)) +
+    geom_contour(data=Path_dt, aes(Var1, Var2, z = value), colour = "red") +
+    ggtitle( title ) +
+    labs(x="ref Index", y="eXp Index") +
+    theme(panel.background = element_blank())
+  
 }
+

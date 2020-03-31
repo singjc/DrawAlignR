@@ -11,10 +11,10 @@ getmzPntrs <- function( input, global, progress=FALSE  ){
   ##*******************************
   
   ## Get filenames from osw files and check if names are consistent between osw and mzML files. ######
-  filenames <- DrawAlignR::getRunNames( input$WorkingDirectory, oswMerged=TRUE)
+  filenames <- DrawAlignR::getRunNames( dataPath = input$WorkingDirectory, oswMerged=TRUE)
   # runs <- c(input$Reference, gsub('...........$', '', input$ChromatogramFile[,'name']))
   # filenames <- filenames[filenames$runs %in% runs,]
-  filenames <- filenames[ grepl( paste(paste0('*', names(global$chromFile), '*'), collapse = "|"), filenames$runs ), ]
+  filenames <- filenames[ grepl( paste(paste0('*', gsub("\\.\\w*", '', names(global$chromFile)), '*'), collapse = "|"), filenames$runs ), ]
   mzPntrs <- list()
   for ( chromatogram_input_index_num in seq(1, length(filenames$runs)) ){
     tryCatch(

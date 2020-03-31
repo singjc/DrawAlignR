@@ -69,10 +69,10 @@ getAnalytesName <- function(oswFiles, analyteFDR = 1.00, commonAnalytes = TRUE){
 #'  commonAnalytes = TRUE)
 #' @export
 getAnalytes <- function(dataPath, runs = NULL, oswMerged = TRUE, runType = "DIA_Proteomics",
-                        commonAnalytes = FALSE, maxFdrQuery = 0.05, nameCutPattern = "(.*)(/)(.*)",
+                        commonAnalytes = FALSE, maxFdrQuery = 0.05, nameCutPattern = "(.*)(/)(.*)", chrom_ext=".chrom.mzML",
                         analyteInGroupLabel = FALSE){
   # Get filenames from .merged.osw file and check if names are consistent between osw and mzML files.
-  filenames <- getRunNames(dataPath, oswMerged, nameCutPattern)
+  filenames <- getRunNames(dataPath = dataPath, oswMerged = oswMerged, nameCutPattern = nameCutPattern, chrom_ext = )
   if(!is.null(runs)){
     filenames <- filenames[filenames$runs %in% runs,]
     missingRun <- setdiff(runs, filenames$runs)

@@ -141,13 +141,13 @@ getXICs4AlignObj <- function(dataPath, runs, oswFiles, analytes, XICfilter = "sg
 #' @export
 getXICs <- function(analytes, runs, dataPath = ".", maxFdrQuery = 1.0, XICfilter = "sgolay",
                     SgolayFiltOrd = 4, SgolayFiltLen = 9, runType = "DIA_proteomics",
-                    oswMerged = TRUE, nameCutPattern = "(.*)(/)(.*)", analyteInGroupLabel = FALSE, mzPntrs=NULL){
+                    oswMerged = TRUE, nameCutPattern = "(.*)(/)(.*)", chrom_ext=".chrom.mzML", analyteInGroupLabel = FALSE, mzPntrs=NULL){
   if( (SgolayFiltLen %% 2) != 1){
     print("SgolayFiltLen can only be odd number")
     return(NULL)
   }
   # Get filenames from .merged.osw file and check if names are consistent between osw and mzML files.
-  filenames <- getRunNames(dataPath, oswMerged, nameCutPattern)
+  filenames <- getRunNames(dataPath = dataPath, oswMerged = oswMerged, nameCutPattern = nameCutPattern, chrom_ext = chrom_ext)
   filenames <- filenames[filenames$runs %in% runs,]
   
   # Get Chromatogram indices for each peptide in each run.

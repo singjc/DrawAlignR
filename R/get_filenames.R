@@ -78,8 +78,10 @@ filenamesFromOSW <- function(dataPath, pattern){
 #' }
 filenamesFromMZML <- function(dataPath, chrom_ext=".chrom.mzML"){
   if ( any(file_test("-d", as.character(dataPath))) ){
+    message(sprintf("[DrawAlignR::filenamesFromMZML] Parsing %s directory for chromatogram files of extension %s.\n", dataPath, chrom_ext))
     temp <- list.files(path = file.path(dataPath), pattern=paste0("*", chrom_ext), recursive = TRUE)
   } else if ( all(file_test("-f", as.character(dataPath))) & all(grepl(chrom_ext, as.character(dataPath)))  ) {
+    message(sprintf("[DrawAlignR::filenamesFromMZML] Using Supplied chromatogram files %s of extension %s.\n", paste(as.character(dataPath), collapse = "\n"), chrom_ext))
     temp <- as.character(dataPath)
   } else {
     temp <- NULL
@@ -89,7 +91,7 @@ filenamesFromMZML <- function(dataPath, chrom_ext=".chrom.mzML"){
    
   ## Get basename of file without pre-directory
   # temp <- basename(temp)
-  message(sprintf("%s %s files are found.", length(temp), chrom_ext))
+  message(sprintf("%s chromatogram files of extension %s are found.", length(temp), chrom_ext))
   mzMLfiles <- vapply(temp, function(x) basename(strsplit(x, split = chrom_ext)[[1]][1]), "")
   mzMLfiles
 }
@@ -139,12 +141,13 @@ getRunNames <- function(dataPath=NULL, oswFiles=NULL, chromFiles=NULL, oswMerged
     mzMLfiles <- filenamesFromMZML(dataPath, chrom_ext=chrom_ext)
   } else if ( is.null(dataPath) & !is.null(chromFiles) ){
     mzMLfiles <- filenamesFromMZML(chromFiles, chrom_ext=chrom_ext)
-  }
+  } 
+  
   # Check if osw files have corresponding mzML file.
   runs <- intersect(filenames$runs, mzMLfiles)
-  print(filenames$runs)
-  print("mzMLfiles")
-  print(mzMLfiles)
+  # print(filenames$runs)
+  # print("mzMLfiles")
+  # print(mzMLfiles)
   if(length(runs) != length(filenames$runs) & !is.null(mzMLfiles)){
     warning(sprintf( "Following files did not have their counterpart in %s directory:\n%s", unique(dirname(names(mzMLfiles))), setdiff(filenames$runs, mzMLfiles) ))
   }

@@ -18,7 +18,7 @@ FROM CHROMATOGRAM
   names(chromFiles) <- basename(chromFiles)
   
   ## Get filenames from osw files and check if names are consistent between osw and mzML files. ######
-  filenames <- getRunNames( dataPath, oswMerged=TRUE, nameCutPattern = nameCutPattern, chrom_ext = chrom_ext )
+  filenames <- getRunNames( dataPath = dataPath, oswMerged=TRUE, nameCutPattern = nameCutPattern, chrom_ext = chrom_ext )
   filenames <- filenames[filenames$runs %in% runs,]
   
   tictoc::tic('Pre-Loading mzML Chromatogram Files onto disk')
