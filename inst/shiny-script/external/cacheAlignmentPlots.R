@@ -30,7 +30,7 @@ cacheAlignmentPlots <- function( input, output, global, values, session ){
               event_register(event="plotly_relayout")
             values$alignedChromsPlot[[plotname]] <- pt3
             ## Check and add Reference plot if not added yet
-            message(sprintf("HERE REFERENCE PLOTTED?: %s", values$reference_plotted))
+            message(sprintf("HERE REFERENCE PLOTTED?: %s\n", values$reference_plotted))
             if ( values$reference_plotted == FALSE ){
               ref_plotname <- paste("plot_run_", values$run_index_map[[ values$Reference ]], sep="")
               cat(sprintf("Storing Reference plot taken from Current Exp: %s of %s with run_idx and plotname %s : %s\n", current_experiment, length(values$Experiment), run_index, plotname ))

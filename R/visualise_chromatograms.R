@@ -499,6 +499,7 @@ plotAlignedAnalytes <- function(AlignObjOutput, plotType = "All", DrawAlignR = F
 #' AlignObjOutput <- getAlignObjs(analytes = "QFNNTDIVLLEDFQK_3", runs, dataPath = dataPath,
 #'  objType = "medium")
 #' plotAlignmentPath(AlignObjOutput)
+#' @importFrom ggplot2 ggplot geom_tile geom_contour ggtitle labs theme aes element_blank
 #' @export
 plotAlignmentPath <- function(AlignObjOutput, title=NULL){
   Alignobj <- AlignObjOutput[[1]][[1]]
@@ -517,13 +518,13 @@ plotAlignmentPath <- function(AlignObjOutput, title=NULL){
   Path_dt <- data.table::melt( Path )
   )
   
-  ggplot() +
-    geom_tile(data=Weight_dt, aes(Var1, Var2, fill = value)) + 
-    gom_contour(data=Weight_dt, aes(Var1, Var2, z = value)) +
-    geom_contour(data=Path_dt, aes(Var1, Var2, z = value), colour = "red") +
-    ggtitle( title ) +
-    labs(x="ref Index", y="eXp Index") +
-    theme(panel.background = element_blank())
+  ggplot2::ggplot() +
+    ggplot2::geom_tile(data=Weight_dt, ggplot2::aes(Var1, Var2, fill = value)) + 
+    ggplot2::geom_contour(data=Weight_dt, ggplot2::aes(Var1, Var2, z = value)) +
+    ggplot2::geom_contour(data=Path_dt, ggplot2::aes(Var1, Var2, z = value), colour = "red") +
+    ggplot2::ggtitle( title ) +
+    ggplot2::labs(x="ref Index", y="eXp Index") +
+    ggplot2::theme(panel.background = ggplot2::element_blank())
   
 }
 
