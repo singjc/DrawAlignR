@@ -24,7 +24,7 @@ RUN R -e "install.packages('shinyWidgets')"
 RUN R -e "install.packages('shinyFiles')"
 RUN R -e "install.packages('plotly')"
 RUN R -e "install.packages('parallel')"
-RUN R -e "devtools::install_github('singjc/mstools', upgrade='never')"
+RUN R -e "devtools::install_github('singjc/mstools')"
 RUN R -e "devtools::install_github('shubham1637/DIAlignR', upgrade='never')"
 RUN R -e "devtools::install_github('singjc/DrawAlignR', ref='link_zooming', force=T)"
 
