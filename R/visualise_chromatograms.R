@@ -457,7 +457,7 @@ plotAlignedAnalytes <- function(AlignObjOutput, plotType = "All", DrawAlignR = F
     figs <- getAlignedFigs(AlignObj, refRun, eXpRun, XICs.ref, XICs.eXp, refPeakLabel, annotatePeak, annotateOrgPeak, global, values, input)
     
     if(DrawAlignR){
-      cat("Succesfully drew ref, exp and exp aligned figs")
+      cat("Succesfully drew ref, exp and exp aligned figs\n")
       return(figs)}
     
     if(plotType == "onlyAligned"){
@@ -510,13 +510,16 @@ plotAlignmentPath <- function(AlignObjOutput, title=NULL){
   #                                  analyte), fontsize = 7) +
   #   latticeExtra::as.layer(lattice::levelplot(Path, col.regions = c("transparent", "green"),
   #                                             alpha = 1, axes = FALSE))
-  
+  suppressWarnings(
   Weight_dt <- data.table::melt( s )
+  )
+  suppressWarnings(
   Path_dt <- data.table::melt( Path )
+  )
   
   ggplot() +
     geom_tile(data=Weight_dt, aes(Var1, Var2, fill = value)) + 
-    geom_contour(data=Weight_dt, aes(Var1, Var2, z = value)) +
+    gom_contour(data=Weight_dt, aes(Var1, Var2, z = value)) +
     geom_contour(data=Path_dt, aes(Var1, Var2, z = value), colour = "red") +
     ggtitle( title ) +
     labs(x="ref Index", y="eXp Index") +

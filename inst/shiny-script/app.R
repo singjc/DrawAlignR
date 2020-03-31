@@ -60,6 +60,8 @@ source( "external/libFile_Input_Button.R", local = TRUE )
 source( "external/oswFile_Input_Button.R", local = TRUE )
 source( "external/workingDirectory_Input.R", local = TRUE )
 source( "external/linkZoomEvent.R", local = TRUE )
+source( "external/cacheAlignmentPlots.R", local = TRUE )
+source( "external/drawAlignedPlots.R", local = TRUE )
 
 # UI ----------------------------------------------------------------------
 
@@ -121,6 +123,8 @@ server <- function(input, output, session) {
     reference_plotted = FALSE,
     drives = shinyFiles::getVolumes(),
     plots = list(),
+    alignedChromsPlot = list(),
+    alignmentPathPlot = list(),
     mzPntrs = NULL
   )
   global <- reactiveValues(
@@ -707,139 +711,15 @@ server <- function(input, output, session) {
           }
         }) # End of local
         } # End for loop
+       
+        ##***********************************************
+        ##    Alignment Plotting Events
+        ##***********************************************
+        ## Cache Algined Plots
+        cacheAlignmentPlots( input, output, global, values, session ) 
+        ## Draw Aligned Results
+        drawAlignedPlots( input, output, global, values, session ) 
         
-        # observeEvent( input$OriginalRTAnnotation, {
-        # MazamaCoreUtils::logger.setLevel("FATAL")
-        for ( i in input$Experiment ) {
-          # Need local so that each item gets its own number. Without it, the value
-          # of i in the renderPlotly() will be the same across all instances, because
-          # of when the expression is evaluated
-          local({
-            print("")
-            print("START PLOTTING")
-            # Define Experiment_i
-            current_experiment <- i
-            cat(sprintf("Current Exp: %s of %s:\n", current_experiment, length(input$Experiment)))
-            
-            # Get run Indec
-            run_index <- values$run_index_map[[ current_experiment ]]
-            cat(sprintf( "Current run index: %s\n", run_index))
-            
-            tryCatch(
-              expr = { 
-                print("Getting Plots...")
-                cat( sprintf( "Names in AlignOPObjs: %s\n", names(values$AlignObj_List) ) )
-                ## Generate Plot
-                if ( class(values$AlignObj_List[[current_experiment]])!= "character" ){
-                  alignedChromsPlot <- plotAlignedAnalytes(AlignObjOutput = values$AlignObj_List[[current_experiment]], DrawAlignR = T, annotatePeak = T, annotateOrgPeak = input$OriginalRTAnnotation, global = global, input = input)
-                  alignmentPathPlot <- plotAlignmentPath( AlignObjOutput = values$AlignObj_List[[current_experiment]], title = current_experiment )
-                } else {
-                  text <- sprintf("There was an issue while performing alignment.\nYou most likely need to adjust one of the alignment settings.\n The following error occured: %s",  values$AlignObj_List[[current_experiment]])
-                  alignedChromsPlot <- list()
-                  alignedChromsPlot$peXpA <- ggplot() +
-                    annotate( "text", x = 4, y = 25, size = 8, label = text ) +
-                    ggtitle( sprintf("Run: %s", current_experiment) ) +
-                    theme_bw() + 
-                    theme( panel.grid.major = element_blank(),
-                           panel.grid.minor = element_blank(),
-                           axis.title = element_blank(),
-                           axis.text = element_blank()
-                    )
-                  
-                  alignmentPathPlot <- ggplot() +
-                    annotate( "text", x = 4, y = 25, size = 8, label = text ) +
-                    ggtitle( sprintf("Run: %s", current_experiment) ) +
-                    theme_bw() + 
-                    theme( panel.grid.major = element_blank(),
-                           panel.grid.minor = element_blank(),
-                           axis.title = element_blank(),
-                           axis.text = element_blank()
-                    )
-                }
-                # values$plot_i <- 1
-                ## Plot Reference
-                
-                if ( (values$run_index_map[[ input$Reference ]] %in% input$n_runs) & !values$reference_plotted &  class(values$AlignObj_List[[current_experiment]])!= "character" ){
-                  tryCatch( expr = {
-                    
-                    
-                    # local({
-                    plotname <- paste("plot_run_", values$run_index_map[[ input$Reference ]], sep="")
-                    cat(sprintf("Plotname: %s for run: %s\n", plotname, input$Reference))
-                    output[[ plotname ]] <- renderPlotly({
-
-                      pt1 <- plotly::ggplotly( (alignedChromsPlot$prefU), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
-                        layout(title = list(text = paste0(alignedChromsPlot$prefU$labels$title,
-                                                          '<br>',
-                                                          '<sup>',
-                                                          gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', alignedChromsPlot$prefU$labels$subtitle)),
-                                                          '</sup>')))
-
-
-                    }) # End renderPlotlyi
-                    
-                    # output[[ plotname ]] <- renderPlot({
-                    #   
-                    #   alignedChromsPlot$prefU +
-                    #     ggplot2::coord_cartesian(xlim = link_zoom_ranges$x, ylim = link_zoom_ranges$y, expand = FALSE)
-                    # }) # End renderPlotly
-                    
-                    values$reference_plotted <- TRUE
-                    cat("Successfully plotted reference\n")
-                    
-                    # }) # End Local
-                  }, 
-                  error = function(e){
-                    cat(e$message)
-                    values$reference_plotted <- FALSE
-                  }) # end tryCatch
-                  
-                  
-                }
-                
-                ## Plot aligned Experiment 
-                if ( run_index %in% input$n_runs ){
-                  # local({
-                  plotname <- paste("plot_run_", run_index, sep="")
-                  cat(sprintf("Plotname: %s for run: %s\n", plotname, current_experiment))
-                  output[[ plotname ]] <- renderPlotly({
-                    
-                    pt3 <- plotly::ggplotly( (alignedChromsPlot$peXpA), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
-                      layout(title = list(text = paste0(alignedChromsPlot$peXpA$labels$title,
-                                                        '<br>',
-                                                        '<sup>',
-                                                        gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', alignedChromsPlot$peXpA$labels$subtitle)),
-                                                        '</sup>')))
-                    
-                    # alignedChromsPlot$peXpA +
-                    #   ggplot2::coord_cartesian(xlim = link_zoom_ranges$x, ylim = link_zoom_ranges$y, expand = FALSE)
-                    
-                    
-                    
-                    
-                  }) # End renderPlotly
-                  cat(sprintf("Successfully Plotted Plotname: %s for run: %s\n", plotname, current_experiment))
-                  
-                  path_plotname <- paste("pathplot_run_", run_index, sep="")
-                  cat(sprintf("Path Plotname: %s for run: %s\n", path_plotname, current_experiment))
-                  output[[ path_plotname ]] <- renderPlotly({
-                    
-                    pt3 <- plotly::ggplotly( (alignmentPathPlot), tooltip = c("all"), dynamicTicks = T)
-                    
-
-                  }) # End renderPlotly
-                  cat(sprintf("Successfully Plotted Path Plotname: %s for run: %s\n", path_plotname, current_experiment))
-                  
-                  # }) # End local
-                }
-                
-              }, 
-              error = function(e){
-                message(sprintf("[Plotting Alignment] There was the following error that occured during Plotting Alignment: %s\n", e$message))
-              }
-            ) # End tryCatch
-          }) # End Local 477
-        }
         
         
         # }) # End ObserveEvent for showing original annotaiton
