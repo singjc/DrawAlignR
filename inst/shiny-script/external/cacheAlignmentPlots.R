@@ -5,7 +5,7 @@ cacheAlignmentPlots <- function( input, output, global, values, session ){
     # of i in the renderPlotly() will be the same across all instances, because
     # of when the expression is evaluated
     local({
-      message("Generating and Save Plots\n")
+      message("Generating and Saving Plots\n")
       # Define Experiment_i
       current_experiment <- i
       
@@ -16,11 +16,11 @@ cacheAlignmentPlots <- function( input, output, global, values, session ){
       
       tryCatch(
         expr = { 
-          print("Getting Plots...")
-          cat( sprintf( "Names in AlignOPObjs: %s\n", names(values$AlignObj_List) ) )
           ## Generate Plot
           if ( class(values$AlignObj_List[[current_experiment]])!= "character" ){
+            ## Get Alignment Plots
             alignedChromsPlot <- plotAlignedAnalytes(AlignObjOutput = values$AlignObj_List[[current_experiment]], DrawAlignR = T, annotatePeak = T, annotateOrgPeak = input$OriginalRTAnnotation, global = global, input = input)
+            ## Store Aligned Experiment Plot
             pt3 <- plotly::ggplotly( (alignedChromsPlot$peXpA), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
               layout(title = list(text = paste0(alignedChromsPlot$peXpA$labels$title,
                                                 '<br>',
@@ -30,8 +30,8 @@ cacheAlignmentPlots <- function( input, output, global, values, session ){
             values$alignedChromsPlot[[plotname]] <- pt3
             ## Check and add Reference plot if not added yet
             if ( values$reference_plotted == FALSE ){
-              ref_plotname <- paste("plot_run_", values$run_index_map[[ input$Reference ]], sep="")
-              cat(sprintf("Storing Reference plot taken from Current Exp: %s of %s with run_idx and plotname %s : %s\n", current_experiment, length(input$Experiment), run_index, plotname ))
+              ref_plotname <- paste("plot_run_", values$run_index_map[[ values$Reference ]], sep="")
+              cat(sprintf("Storing Reference plot taken from Current Exp: %s of %s with run_idx and plotname %s : %s\n", current_experiment, length(values$Experiment), run_index, plotname ))
               pt1 <- plotly::ggplotly( (alignedChromsPlot$prefU), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
                 layout(title = list(text = paste0(alignedChromsPlot$prefU$labels$title,
                                                   '<br>',
@@ -39,10 +39,10 @@ cacheAlignmentPlots <- function( input, output, global, values, session ){
                                                   gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', alignedChromsPlot$prefU$labels$subtitle)),
                                                   '</sup>')))
               values$alignedChromsPlot[[ref_plotname]] <- pt1
-              print( values$alignedChromsPlot[[ref_plotname]] )
               values$reference_plotted <- TRUE
             }
-            alignmentPathPlot <- plotAlignmentPath( AlignObjOutput = values$AlignObj_List[[current_experiment]], title = sprintf("%s Aligned to %s", current_experiment, input$Reference) )
+            ## Get Alignment Path Plot
+            alignmentPathPlot <- plotAlignmentPath( AlignObjOutput = values$AlignObj_List[[current_experiment]], title = sprintf("%s Aligned to %s", current_experiment, values$Reference) )
             pt3 <- plotly::ggplotly( (alignmentPathPlot), tooltip = c("all"), dynamicTicks = T)
             values$alignmentPathPlot[[plotname]] <- pt3
           } else {
@@ -58,10 +58,10 @@ cacheAlignmentPlots <- function( input, output, global, values, session ){
                      axis.text = element_bilank()
               ) )
             
-            ref_plotname <- paste("plot_run_", values$run_index_map[[ input$Reference ]], sep="")
+            ref_plotname <- paste("plot_run_", values$run_index_map[[ values$Reference ]], sep="")
             values$alignedChromsPlot[[ref_plotname]] <- plotly::ggplotly( ggplot() +
               annotate( "text", x = 4, y = 25, size = 8, label = text ) +
-              ggtitle( sprintf("Run: %s", current_experiment) ) +
+              ggtitle( sprintf("Run: %s", values$Reference) ) +
               theme_bw() + 
               theme( panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(),

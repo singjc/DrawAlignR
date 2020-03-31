@@ -62,6 +62,7 @@ source( "external/workingDirectory_Input.R", local = TRUE )
 source( "external/linkZoomEvent.R", local = TRUE )
 source( "external/cacheAlignmentPlots.R", local = TRUE )
 source( "external/drawAlignedPlots.R", local = TRUE )
+source( "external/clearPlots.R", local = TRUE )
 
 # UI ----------------------------------------------------------------------
 
@@ -118,6 +119,9 @@ server <- function(input, output, session) {
   
   ## reactive values object to store some re-usable stuff
   values <- reactiveValues(
+    Reference = '',
+    Previous_Reference = '',
+    Experiments_to_Align = '',
     transition_selection_list = list(),
     lib_df = NULL,
     reference_plotted = FALSE,
@@ -311,6 +315,13 @@ server <- function(input, output, session) {
   observeEvent( input$Reference, {
     ## Get Reference Run
     values$Reference <- input$Reference
+    if ( values$Reference!=values$Previous_Reference & values$Previous_Reference!='' ){
+      message(sprintf("Previous Reference: %s --> New Reference: %s\n", values$Previous_Reference, values$Reference ))
+      values$reference_plotted <- FALSE
+      ref_plotname <- paste("plot_run_", values$run_index_map[[ values$Previous_Reference ]], sep="")
+      # clearPlots( input, output, global, values, session )
+    }
+    values$Previous_Reference <- input$Reference
     ## Get Experiments minuc Reference
     values$Experiments_to_Align <- values$chromnames[ !(values$chromnames %in% input$Reference) ]
     ## Update Experiment list with first entry removed
@@ -492,6 +503,7 @@ server <- function(input, output, session) {
     {
       input$Mod
       input$Align 
+      input$Reference
       input$refreshAlign
     }, {
       if ( !(input$Align)  ){
@@ -715,6 +727,8 @@ server <- function(input, output, session) {
         ##***********************************************
         ##    Alignment Plotting Events
         ##***********************************************
+        ## Clear Plots
+        clearPlots( input, output, global, values, session )
         ## Cache Algined Plots
         cacheAlignmentPlots( input, output, global, values, session ) 
         ## Draw Aligned Results

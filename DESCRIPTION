@@ -40,7 +40,7 @@ Imports: shiny,
           Rcpp,
           DIAlignR,
           mstools
-Remotes: github::Roestlab/mstools,
+Remotes: github::singjc/mstools,
          github::shubham1637/DIAlignR
 License: MIT
 Encoding: UTF-8
