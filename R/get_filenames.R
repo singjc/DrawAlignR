@@ -37,13 +37,21 @@ filenamesFromOSW <- function(dataPath, pattern){
   } else if (pattern == "*merged.osw") {
     message("Looking for merged.osw file.")
     # Look for merged.osw files in osw/ directory.
-    temp <- list.files(path = file.path(dataPath, "osw"), pattern="*merged.osw")
+    if ( file_test("-d", as.character(dataPath)) ){
+      temp <- list.files(path = file.path(dataPath, "osw"), pattern="*merged.osw", full.names = T)
+    } else if ( file_test("-f", as.character(dataPath)) & tools::file_ext(dataPath)=='osw'  ) {
+      temp <- as.character(dataPath)
+    } else {
+      temp <- NULL
+      warning(sprintf("%s did not contain any osw file(s) matching pattern: %s\n", dataPath, pattern))
+      return( NULL )
+    }
     # Throw an error if no merged.osw files are found.
     if(length(temp) == 0){return(stop("No merged.osw file is found."))}
-    con <- DBI::dbConnect(RSQLite::SQLite(), dbname = file.path(dataPath, "osw", temp[1]))
+    con <- DBI::dbConnect(RSQLite::SQLite(), dbname = temp)
     # Fetch mzML filenames from RUN table.
     filenames <- tryCatch(expr = DBI::dbGetQuery(con, statement = query), finally = DBI::dbDisconnect(con))
-    message(nrow(filenames), " are in ", temp[1], " file")
+    message(nrow(filenames), " runs are in ", basename(temp[1]), " file")
   } else {
     message("Only .osw and merged.osw files can be read.")
     filenames <- NULL
@@ -69,7 +77,16 @@ filenamesFromOSW <- function(dataPath, pattern){
 #' filenamesFromMZML(dataPath)
 #' }
 filenamesFromMZML <- function(dataPath, chrom_ext=".chrom.mzML"){
-  temp <- list.files(path = file.path(dataPath), pattern=paste0("*", chrom_ext), recursive = TRUE) 
+  if ( any(file_test("-d", as.character(dataPath))) ){
+    temp <- list.files(path = file.path(dataPath), pattern=paste0("*", chrom_ext), recursive = TRUE)
+  } else if ( all(file_test("-f", as.character(dataPath))) & all(grepl(chrom_ext, as.character(dataPath)))  ) {
+    temp <- as.character(dataPath)
+  } else {
+    temp <- NULL
+    warning(sprintf("%s did not contain any chromatogram files of extension: %s\n", dataPath, chrom_ext))
+    return( NULL )
+  }
+   
   ## Get basename of file without pre-directory
   # temp <- basename(temp)
   message(sprintf("%s %s files are found.", length(temp), chrom_ext))
@@ -89,6 +106,8 @@ filenamesFromMZML <- function(dataPath, chrom_ext=".chrom.mzML"){
 #' License: (c) Author (2019) + MIT
 #' Date: 2019-12-14
 #' @param dataPath (char) Path to mzml and osw directory.
+#' @param oswFiles (char) Path to OSW file(s) if supplied implicitly.
+#' @param chromFiles (char) Path to chromatogram files if supplied implicitly.
 #' @param oswMerged (logical) TRUE for experiment-wide FDR and FALSE for run-specific FDR by pyprophet.
 #' @param nameCutPattern (string) regex expression to fetch mzML file name from RUN.FILENAME columns of osw files.
 #' @param chrom_ext (char) Extension to search for chromatogram files in data directory. (Default: ".chrom.mzML")
@@ -99,29 +118,40 @@ filenamesFromMZML <- function(dataPath, chrom_ext=".chrom.mzML"){
 #' dataPath <- system.file("extdata", package = "DIAlignR")
 #' getRunNames(dataPath = dataPath)
 #' @export
-getRunNames <- function(dataPath, oswMerged = TRUE, nameCutPattern = "(.*)(/)(.*)", chrom_ext=".chrom.mzML"){
+getRunNames <- function(dataPath=NULL, oswFiles=NULL, chromFiles=NULL, oswMerged = TRUE, nameCutPattern = "(.*)(/)(.*)", chrom_ext=".chrom.mzML"){
   # Get filenames from RUN table of osw files.
-  if(oswMerged == FALSE){
+  if(oswMerged == FALSE & !is.null(dataPath) &  is.null(oswFiles)){
     filenames <- filenamesFromOSW(dataPath, pattern = "*.osw")
-  } else{
+  } else if (oswMerged == TRUE & !is.null(dataPath) ){
     filenames <- filenamesFromOSW(dataPath, pattern = "*merged.osw")
+  } else if ( oswMerged == FALSE & !is.null(oswFiles)  ) {
+    filenames <- filenamesFromOSW(oswFiles, pattern = "*.osw") 
+  } else if ( oswMerged == TRUE & !is.null(oswFiles) ) {
+    filenames <- filenamesFromOSW(oswFiles, pattern = "*merged.osw")
   }
   # Get names of mzml files.
   runs <- vapply(filenames[,"filename"], function(x) gsub(nameCutPattern, replacement = "\\3", x), "")
   fileExtn <- strsplit(runs[[1]], "\\.")[[1]][2]
   fileExtn <- paste0(".", fileExtn)
   filenames$runs <- vapply(runs, function(x) strsplit(x, split = fileExtn)[[1]][1], "")
-
-  mzMLfiles <- filenamesFromMZML(dataPath, chrom_ext=chrom_ext)
+  
+  if ( !is.null(dataPath) & is.null(chromFiles) ){
+    mzMLfiles <- filenamesFromMZML(dataPath, chrom_ext=chrom_ext)
+  } else if ( is.null(dataPath) & !is.null(chromFiles) ){
+    mzMLfiles <- filenamesFromMZML(chromFiles, chrom_ext=chrom_ext)
+  }
   # Check if osw files have corresponding mzML file.
   runs <- intersect(filenames$runs, mzMLfiles)
-  if(length(runs) != length(filenames$runs)){
+  print(filenames$runs)
+  print("mzMLfiles")
+  print(mzMLfiles)
+  if(length(runs) != length(filenames$runs) & !is.null(mzMLfiles)){
     warning(sprintf( "Following files did not have their counterpart in %s directory:\n%s", unique(dirname(names(mzMLfiles))), setdiff(filenames$runs, mzMLfiles) ))
   }
   if(length(runs) == 0){
     message("Names in RUN table of osw files aren't matching to mzML filenames.")
     message("Check if you have correct file names.")
-    return(stop("Name mismatch between osw and mzML files."))
+    return(warning("Name mismatch between osw and mzML files."))
   }
   filenames <- filenames[filenames$runs %in% runs,]
   rownames(filenames) <- paste0("run", 0:(nrow(filenames)-1), "")

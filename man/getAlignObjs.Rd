@@ -60,6 +60,8 @@ getAlignObjs(
 
 \item{nameCutPattern}{(string) regex expression to fetch mzML file name from RUN.FILENAME columns of osw files.}
 
+\item{chrom_ext}{(string) chromatoram file extension to expect}
+
 \item{maxFdrQuery}{(numeric) A numeric value between 0 and 1. It is used to filter features from osw file which have SCORE_MS2.QVALUE less than itself.}
 
 \item{maxFdrLoess}{(numeric) A numeric value between 0 and 1. Features should have m-score lower than this value for participation in LOESS fit.}

@@ -8,8 +8,8 @@
 #' @import shinyWidgets
 #' @import shinyBS
 #' @import plotly
-#' @import DIAlignR
-#' @import mstools
+#' @importFrom  DIAlignR getGlobalAlignment getAlignObj 
+#' @importFrom  mstools getXIC getTransitionScores_ unimodTocodename codenameTounimod getChromatogramDataPoints_ getPepLibData_ getOSWData_ log_setup  getmzPntrs getsqMassPntrs
 #'
 #' @export
 runDrawAlignR <- function() {

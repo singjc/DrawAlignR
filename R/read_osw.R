@@ -53,9 +53,12 @@ fetchAnalytesInfo <- function(oswName, maxFdrQuery, oswMerged,
   con <- DBI::dbConnect(RSQLite::SQLite(), dbname = oswName)
   
   # Check for presence of required SCORE_MS2 table
-  check_sqlite_table( conn=con, table="SCORE_MS2", msg="[DIAlignR::fetchAnalytesInfo:::check_sqlite_table]")
+  check_sqlite_table( conn=con, table="SCORE_MS2", msg="[DrawAlignR::fetchAnalytesInfo:::check_sqlite_table]")
   # If analysing IPF results, check for SCORE_IPF table
-  if ( runType=="DIA_Proteomics_ipf" ) check_sqlite_table( conn=con, table="SCORE_IPF", msg="[DIAlignR::fetchAnalytesInfo:::check_sqlite_table]")
+  if ( runType=="DIA_Proteomics_ipf" ) check_sqlite_table( conn=con, table="SCORE_IPF", msg="[DrawAlignR::fetchAnalytesInfo:::check_sqlite_table]")
+  # IF using ipf and analytes is supplied, need to use codename standard.. 
+  # TODO: Make this more robust
+  if ( runType=="DIA_Proteomics_ipf" & !is.null(analytes) ) analytes <- mstools::unimodTocodename(analytes)
   
   # Generate a query.
   ## TODO: Add fitlers for Identifying transitions at given PEP
@@ -112,15 +115,17 @@ fetchAnalytesInfo <- function(oswName, maxFdrQuery, oswMerged,
   analytesInfo$n <- NULL
   ## Convert ids to character
   class(analytesInfo$transition_id) <- as.character()
+  ## Ensure UniMod Standard
+  # analytesInfo$transition_id <- lapply(analytesInfo$transition_id, mstools::codenameTounimod )
   exec_time <- tictoc::toc(quiet = TRUE)
-  message( sprintf("[DIAlignR::fetchAnalytesInfo(R#67)] Extracting analyte feature information for %s took %s seconds", basename(filename), round(exec_time$toc - exec_time$tic, 3) ))
+  message( sprintf("[DrawAlignR::fetchAnalytesInfo(R#48)] Extracting analyte feature information for %s took %s seconds", basename(filename), round(exec_time$toc - exec_time$tic, 3) ))
+  if ( dim(analytesInfo)[1]==0 ) message( sprintf("[DrawAlignR::fetchAnalytesInfo(R#48)] Warning! %s had a dataframe with %s rows found!\n", basename(filename), dim(analytesInfo)[1] ))
   
   return( analytesInfo )
 }
 
 
 #' Fetch analytes from OSW file
-#'
 #' Get a data-frame of analytes, their chromatogram indices and associated FDR-scores.
 #'
 #' @author Shubham Gupta, \email{shubh.gupta@mail.utoronto.ca}

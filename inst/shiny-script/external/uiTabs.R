@@ -162,7 +162,20 @@ AlignmentSettingsTab <- shiny::tabPanel( title = "Alignment Settings",
                                          ##***********************************************
                                          ##    Alignment Parameters
                                          ##***********************************************
-                                         
+                                        
+                                         ## simMeasure
+                                         shiny::selectizeInput('runType', 'Experiment Type', selected = 'DIA_Proteomics_ipf', choices = c('DIA_Proteomics', 'DIA_Proteomics_ipf', 'MRM_Proteomics', 'DIA_Metabolomics'), 
+                                                               options = list(
+                                                                 valueField = 'runType',
+                                                                 labelField = 'name',
+                                                                 searchField = 'name',
+                                                                 options = list( ),
+                                                                 create = FALSE, 
+                                                                 multiple = FALSE,
+                                                                 selected = NULL
+                                                               )
+                                         ),
+                                          
                                          ## analyteInGroupLabel
                                          shiny::checkboxInput('analyteInGroupLabel', 'Use Analyte Group Label', value = FALSE),
                                          
@@ -176,16 +189,16 @@ AlignmentSettingsTab <- shiny::tabPanel( title = "Alignment Settings",
                                          shiny::textInput("nameCutPattern", "REGEX string for mzML filename", value = "(.*)(/)(.*)"),
                                          
                                          ## SgolayFiltOrd
-                                         shiny::numericInput("maxFdrQuery", "OSW Extraction m-score threshold", value=0.05, min = NA, max = NA, step = NA),
+                                         shiny::numericInput("maxFdrQuery", "OSW Extraction m-score threshold", value=1, min = NA, max = NA, step = NA),
                                          
                                          ## maxFdrLoess
-                                         shiny::numericInput("maxFdrLoess", "Feature m-score threshold for LOESS fit", value=0.01, min = NA, max = NA, step = NA),
+                                         shiny::numericInput("maxFdrLoess", "Feature m-score threshold for LOESS fit", value=1, min = NA, max = NA, step = NA),
                                          
                                          ## analyteFDR
                                          shiny::numericInput("analyteFDR", "Analyte m-score threshold", value=1, min = 0, max = 1, step = NA),
                                          
                                          ## spanvalue
-                                         shiny::numericInput("spanvalue", "Span Value for LOESS fit", value=0.1, min = NA, max = NA, step = NA),
+                                         shiny::numericInput("spanvalue", "Span Value for LOESS fit", value=1, min = NA, max = NA, step = NA),
                                          
                                          ## normalization
                                          shiny::selectizeInput('normalization', 'Normalization', selected = 'mean', choices = c('mean', 'l2'), 
@@ -314,14 +327,14 @@ PlottingSettingsTab <- shiny::tabPanel( title = "Plot Settings",
                                         
                                         ## Enanle Linked Zooming
                                         shiny::splitLayout(cellWidths = c("80%", "20%"),
-                                                           shinyWidgets::switchInput(inputId = 'plotly.linkedzooming.x', label = 'Link Zoom X', value = TRUE),
+                                                           shinyWidgets::switchInput(inputId = 'plotly.linkedzooming.x', label = 'Link Zoom X', value = FALSE),
                                                            bsButton("plotly_linkedzooming_x_help", label = "?", size = "small")
                                         ),
                                         shiny::tags$style(type='text/css', "#plotly.linkedzooming.x { width:100%; margin-top: 0px;}"),
                                         shiny::tags$style(type='text/css', "#plotly_linkedzooming_x_help { width:100%; margin-top: 0px;}"), 
                                         
                                         shiny::splitLayout(cellWidths = c("80%", "20%"),
-                                                           shinyWidgets::switchInput(inputId = 'plotly.linkedzooming.y', label = 'Link Zoom Y', value = TRUE),
+                                                           shinyWidgets::switchInput(inputId = 'plotly.linkedzooming.y', label = 'Link Zoom Y', value = FALSE),
                                                            bsButton("plotly_linkedzooming_y_help", label = "?", size = "small")
                                         ),
                                         shiny::tags$style(type='text/css', "#plotly.linkedzooming.y { width:100%; margin-top: 0px;}"),

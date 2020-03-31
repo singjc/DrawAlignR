@@ -13,6 +13,7 @@
 #' @param SgolayFiltOrd (integer) It defines the polynomial order of filer.
 #' @param SgolayFiltLen (integer) Must be an odd number. It defines the length of filter.
 #' @return A list of data-frames. Each data frame has elution time and intensity of fragment-ion XIC.
+#' @importFrom parallel mclapply detectCores
 #' @examples
 #' dataPath <- system.file("extdata", package = "DIAlignR")
 #' mzmlName<-paste0(dataPath,"/mzml/hroest_K120809_Strep10%PlasmaBiolRepl2_R04_SW_filt.chrom.mzML")
@@ -23,7 +24,8 @@
 #' }
 extractXIC_group <- function(mz, chromIndices, XICfilter = "sgolay", SgolayFiltOrd = 4, SgolayFiltLen = 9){
   if( any(class(mz)=="mzRpwiz") ){
-    XIC_group <- mclapply( seq_along(chromIndices), function(i) {
+    message("[DrawAlignR::extractXIC_group] Calling mzR to extract XICs\n")
+    XIC_group <- lapply( seq_along(chromIndices), function(i) {
       
       rawChrom <- mzR::chromatograms(mz, chromIndices[i])
       
@@ -34,12 +36,12 @@ extractXIC_group <- function(mz, chromIndices, XICfilter = "sgolay", SgolayFiltO
       
       return(rawChrom)
     } )
-    
   } else if ( is.data.frame(mz) ) { # TODO Need to add a better check.
+    message("[DrawAlignR::extractXIC_group] Calling mstools to extract XICs\n")
     XIC_group <- mstools::getChromatogramDataPoints_( filename = ".sqMass", chromIndices, id_type = "chromatogramIndex", name_time = "time", name_intensity = "paste0('X', data_row$FRAGMENT_ID)", mzPntrs = mz, SgolayFiltOrd = SgolayFiltOrd, SgolayFiltLen = SgolayFiltLen )
     names(XIC_group) <- NULL
   }
-  
+  message(sprintf("[DrawAlignR::extractXIC_group] Lenth of XIC_group: %s\n", length(XIC_group)))
   
   return(XIC_group)
 }

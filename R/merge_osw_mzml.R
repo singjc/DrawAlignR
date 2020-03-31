@@ -99,12 +99,12 @@ mergeOswAnalytes_ChromHeader <- function(oswAnalytes, chromHead, analyteFDR =  1
 #' oswFiles <- getOswFiles(dataPath = dataPath, filenames =filenames, analyteInGroupLabel = TRUE)
 #' @export
 getOswFiles <- function(dataPath, filenames, maxFdrQuery = 0.05, analyteFDR = 0.01, oswMerged = TRUE,
-                         analytes = NULL, runType = "DIA_proteomics", analyteInGroupLabel = FALSE,
+                        analytes = NULL, runType = "DIA_proteomics", analyteInGroupLabel = FALSE,
                         identifying = FALSE, identifying.transitionPEPfilter=0.6, mzPntrs = NULL ){
   oswFiles <- list()
   for(i in 1:nrow(filenames)){
     run <- rownames(filenames)[i]
-   # Get a query to search against the osw files.
+    # Get a query to search against the osw files.
     if(oswMerged == TRUE){
       oswName <- list.files(path = file.path(dataPath, "osw"), pattern="*merged.osw")
       oswName <- file.path(dataPath, "osw", oswName[1])
@@ -121,7 +121,7 @@ getOswFiles <- function(dataPath, filenames, maxFdrQuery = 0.05, analyteFDR = 0.
     oswAnalytes <- fetchAnalytesInfo(oswName, maxFdrQuery, oswMerged, analytes = analytes,
                                      filename = filenames$filename[i], runType, analyteInGroupLabel, 
                                      identifying = identifying, identifying.transitionPEPfilter=identifying.transitionPEPfilter)
-
+    
     # Get chromatogram indices from the header file.
     if(is.null(mzPntrs)){
       ## TODO Fix this for sqMass giles
@@ -129,11 +129,16 @@ getOswFiles <- function(dataPath, filenames, maxFdrQuery = 0.05, analyteFDR = 0.
       chromHead <- readChromatogramHeader(mzmlName)
     } else{
       if ( isListObj(mzPntrs[[run]], "chromHead") ){
-        message('An mz object and chromHead was found in the mzPntrs object supplied, skipping readChromatogramHeader...')
+        message(sprintf('An mz object and chromHead (dim: %s) was found in the mzPntrs object supplied, skipping readChromatogramHeader...', paste0(dim(getListObj( mzPntrs[[run]], 'chromHead')), collapse = ", ")))
         chromHead <- getListObj( mzPntrs[[run]], 'chromHead')
       } else {
         runname <- rownames(filenames)[i]
-        chromHead <- mzR::chromatogramHeader(mzPntrs[[run]]$mz) 
+        tryCatch(expr = {
+          chromHead <- mzR::chromatogramHeader(mzPntrs[[run]]$mz)
+        }, error = function(e){
+          message( sprintf('[DrawAlignR::getOswFiles] There was an error while calling mzR::chromatogramHeader. on the cached mzPntrs object from run %s.\nLast error traceback was: %s\n', run, e$message) )
+        })
+         
       }
     }
     

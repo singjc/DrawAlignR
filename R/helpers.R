@@ -1,9 +1,55 @@
 ## quiets concerns of R CMD check re: the .'s that appear in pipelines
 if(getRversion() >= "2.15.1")  utils::globalVariables(c("."))
 
+
+#' Get string information for Maintainer
+#' @param email A character vector for email address to contact maintainer
+#' @param github A character vector for github repository to submit issue/feature requests
+#' @return A chracter vector with Maintainer information
+#' @export
 getMaintainer <- function(email='justincsing@gmail.com', github='https://github.com/singjc/DrawAlignR'){
   sprintf('%s (%s)\n', email, utils::URLdecode(github))
 }
+
+#' Get string of function call
+#' @param func_args_list A list object containing information of arguments to a function call
+#' @return A chracter vector representin function call
+#' @export
+getFunctionCallArgs <- function( func_args_list ){
+  
+  function_name <- as.character( func_args_list[[1]] )
+  
+  function_args <- func_args_list[-1]
+  
+  # print( eval(function_args[["analytes"]]) )
+  
+  function_args_names <- as.character(names( function_args ))
+  
+  arg_evals <- unlist(lapply(function_args_names, function( arg_name ){
+    list_obj <- eval(getListObj(function_args, arg_name))
+    class_check <- (is.character(list_obj) | is.numeric(list_obj) | is.logical(list_obj))
+    is_character_check <- is.character(list_obj)
+    ## Check if list obj is more than one element
+    if ( length(list_obj)>1 & is_character_check ) {
+      list_obj <- paste0( "c(", paste0( paste0("'", list_obj, "'"), collapse = ', '), ")" )
+    } else if ( length(list_obj)==1 & is_character_check ) {
+      list_obj <- paste0("'", list_obj, "'")
+    } else if ( length(list_obj)>1 & !is_character_check ) {
+      list_obj <- paste0( "c(", paste0( list_obj, collapse = ', '), ")" )
+    }
+    
+    sprintf( "%s = %s", arg_name, ifelse( class_check, 
+                                          list_obj, 
+                                          class(list_obj) ) ) 
+  }))
+  
+  # print(function_name)
+  # print(paste(arg_evals, collapse = ', '))
+  
+  sprintf( "Function Call:\n\n%s( %s )\n", function_name, paste(arg_evals, collapse = ', ') )
+  
+}
+
 
 #' Fetch the reference run-index.
 #'
@@ -25,6 +71,7 @@ getMaintainer <- function(email='justincsing@gmail.com', github='https://github.
 #' getRefRun(oswFiles = oswFiles_DIAlignR, analyte = "14299_QFNNTDIVLLEDFQK/3")
 #' }
 #' @seealso \code{\link{getOswFiles}, \link{getOswAnalytes}}
+#' @export
 getRefRun <- function(oswFiles, analyte){
   # Select reference run based on m-score
   minMscore <- 1
@@ -59,7 +106,7 @@ getRefRun <- function(oswFiles, analyte){
         }
       }, 
       error = function(e){
-        message( sprintf("[DIAlignR::utils::getRefRun] There was an error that occured during reference run index extraction.\n%s", e$message))
+        message( sprintf("[DrawAlignR::utils::getRefRun] There was an error that occured during reference run index extraction.\n%s", e$message))
       }
     )
     
@@ -90,6 +137,7 @@ getRefRun <- function(oswFiles, analyte){
 #'  analyte = "14299_QFNNTDIVLLEDFQK/3")
 #' }
 #' @seealso \code{\link{getOswFiles}, \link{getOswAnalytes}}
+#' @export
 selectChromIndices <- function(oswFiles, runname, analyte, product_mz_filter_list=NULL, return_index="chromatogramIndex",  keep_all_detecting=T){
   
   ## TMP Fix
@@ -158,6 +206,7 @@ selectChromIndices <- function(oswFiles, runname, analyte, product_mz_filter_lis
 #' @param x A list object
 #' @param name Name of sub-components in list
 #' @return logical value if name is present in list
+#' @export
 isListObj <- function(x, name) {
   pos <- match(name, names(x))
   if (!is.na(pos)){ return(TRUE) } else { return(FALSE) }
@@ -175,6 +224,7 @@ isListObj <- function(x, name) {
 #' @param x A list object
 #' @param name Name of sub-components in list
 #' @return returns the named object in list
+#' @export
 getListObj <- function(x, name) {
   pos <- match(name, names(x))
   if (!is.na(pos)) return(x[[pos]])
@@ -193,6 +243,7 @@ getListObj <- function(x, name) {
 #' @return Logical value, TRUE if table is present
 #' 
 #' @importFrom DBI dbExistsTable
+#' @export
 check_sqlite_table <- function( conn, table, msg="" ) {
   if( !DBI::dbExistsTable( conn, table ) ){
     out.msg <- sprintf("%s An Error occured! There was no %s Table found in %s\n", msg, table, conn@dbname)
@@ -203,6 +254,7 @@ check_sqlite_table <- function( conn, table, msg="" ) {
 #' Check is SCORE_IPF is in database
 #' @param oswFile A character vector pointing to path of osw file
 #' @return returns a logical value if SCORE_IPF is present or not
+#' @export
 Score_IPF_Present <- function( oswFile ){
   db <- DBI::dbConnect( RSQLite::SQLite(), oswFile )
   if ( DBI::dbExistsTable( db, "SCORE_IPF" ) ){
@@ -217,7 +269,8 @@ Score_IPF_Present <- function( oswFile ){
 #' Convert Variable to character including NULL
 #' @param x An object to coerce to character
 #' @return returns a character vector
-as.character.null <- function( x ){
+#' @export
+as_character_null <- function( x ){
   
   if ( is.null(x) ){
     return( 'NULL' )
@@ -231,6 +284,7 @@ as.character.null <- function( x ){
 #' @param list_obj A list object to coerce to character
 #' @param collapse A character vector to collapse characters on
 #' @return returns a character vector
+#' @export
 listTostring <- function( list_obj, collapse = '\n' ){
   paste( paste(names(list_obj), list_obj, sep=' = '), collapse = collapse )
 }

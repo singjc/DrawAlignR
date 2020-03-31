@@ -41,39 +41,39 @@ chromFile_Input_Button <- function( input, output, global, values, session ){
           shiny::updateCheckboxGroupInput( session, inputId = "n_runs", choices = n_runs_index, selected = seq(1, length((values$chromnames))), inline = TRUE  )
         }
         
-        ## Get File Extension Type
-        # fileType <- gsub( '.*\\.', '', input$ChromatogramFile$name)
-        fileType <- unique(gsub( ".*\\.", "", global$chromFile))
-        if ( tolower(fileType)=='mzml' | tolower(fileType)=='mzml.gz' ){
-          ##*******************************
-          ## Pre-Load mzML Files
-          ##*******************************
-          output$bar <- renderPlot({
-            withProgress(message = sprintf('Cacheing %s mzML Chromatogram File(s)...', length(n_runs_index)),
-                         detail = 'This might take a while for large chromatogram files...', value = 0, {
-                           mzPntrs <- getmzPntrs( input, global, progress=TRUE  )
-                         })
-          })
-          ## Store mzPntrs container
-          values$mzPntrs <- mzPntrs
-        } else if ( tolower(fileType)=='sqmass' ){
-          ##*******************************
-          ## Pre-Load sqMass Files
-          ##*******************************
-          ## Get filenames from osw files and check if names are consistent between osw and mzML files. 
-          filenames <- getRunNames( input$WorkingDirectory, oswMerged=TRUE, chrom_ext=".chrom.sqMass")
-          runs <- filenames$runs
-          names(runs) <- rownames(filenames)
-          output$bar <- renderPlot({
-            withProgress(message = sprintf('Cacheing %s mzML Chromatogram File(s)...', length(n_runs_index)),
-                         detail = 'This might take a while for large chromatogram files...', value = 0, {
-                           mzPntrs <- getsqMassPntrs(dataPath=input$WorkingDirectory, runs)
-                         })
-          })
-          values$mzPntrs <- mzPntrs
-        } else {
-          warning( sprintf("There was an unknown chromtagoram file format: %s. Could not cache data of this type. Email or submit any issue to %s.", fileType, getMaintainer() ))
-        }
+        # ## Get File Extension Type
+        # # fileType <- gsub( '.*\\.', '', input$ChromatogramFile$name)
+        # fileType <- unique(gsub( ".*\\.", "", global$chromFile))
+        # if ( tolower(fileType)=='mzml' | tolower(fileType)=='mzml.gz' ){
+        #   ##*******************************
+        #   ## Pre-Load mzML Files
+        #   ##*******************************
+        #   output$bar <- renderPlot({
+        #     withProgress(message = sprintf('Cacheing %s mzML Chromatogram File(s)...', length(n_runs_index)),
+        #                  detail = 'This might take a while for large chromatogram files...', value = 0, {
+        #                    mzPntrs <- DrawAlignR::getmzPntrs( input, global, progress=TRUE  )
+        #                  })
+        #   })
+        #   ## Store mzPntrs container
+        #   values$mzPntrs <- mzPntrs
+        # } else if ( tolower(fileType)=='sqmass' ){
+        #   ##*******************************
+        #   ## Pre-Load sqMass Files
+        #   ##*******************************
+        #   ## Get filenames from osw files and check if names are consistent between osw and mzML files. 
+        #   filenames <- getRunNames( input$WorkingDirectory, oswMerged=TRUE, chrom_ext=".chrom.sqMass")
+        #   runs <- filenames$runs
+        #   names(runs) <- rownames(filenames)
+        #   output$bar <- renderPlot({
+        #     withProgress(message = sprintf('Cacheing %s mzML Chromatogram File(s)...', length(n_runs_index)),
+        #                  detail = 'This might take a while for large chromatogram files...', value = 0, {
+        #                    mzPntrs <- DrawAlignR::getsqMassPntrs(dataPath=input$WorkingDirectory, runs)
+        #                  })
+        #   })
+        #   values$mzPntrs <- mzPntrs
+        # } else {
+        #   warning( sprintf("There was an unknown chromtagoram file format: %s. Could not cache data of this type. Email or submit any issue to %s.", fileType, getMaintainer() ))
+        # }
         
         
       },

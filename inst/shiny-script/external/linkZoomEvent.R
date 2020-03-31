@@ -12,13 +12,13 @@ linkZoomEvent <- function( input, output, values, global, session, plotname ){
   
   observe({
     if( plotname!="plot_run_" ){
-    print( sprintf("Getting source data for %s", plotname) )
+    # print( sprintf("Getting source data for %s", plotname) )
     ## Get event data for relayout events (zooming data)
     link_zoom_ranges <- event_data(event = "plotly_relayout", source = plotname, session=session)
-    message( sprintf("linked_zoom event data:\n%s\n", listTostring(link_zoom_ranges)) )
+    # message( sprintf("linked_zoom event data:\n%s\n", listTostring(link_zoom_ranges)) )
     ## Get event data for double click events
     unzoom_double_click <- event_data(event = "plotly_doubleclick", source = plotname, session=session)
-    message( sprintf("unzoom_double_click: %s\n", as.character.null(unzoom_double_click)) )
+    # message( sprintf("unzoom_double_click: %s\n", as_character_null(unzoom_double_click)) )
     
     
     if ( ( !is.null(link_zoom_ranges) || ifelse( is.null(link_zoom_ranges), FALSE, tryCatch({names(link_zoom_ranges[1]) %in% c("xaxis.autorange", "yaxis.autorange", "width")},error=function(e){FALSE}) ) ) & 

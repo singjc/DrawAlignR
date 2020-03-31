@@ -8,17 +8,9 @@
 #' @import shinyWidgets
 #' @import shinyBS
 #' @import plotly
-#' @import DIAlignR
-#' @import mstools
+#' @importFrom  DIAlignR getGlobalAlignment getAlignObj 
+#' @importFrom mstools getXIC getTransitionScores_ unimodTocodename codenameTounimod getChromatogramDataPoints_ getPepLibData_ getOSWData_ log_setup getmzPntrs getsqMassPntrs
 #'
-#' @source "GetXIC.r"
-#' @source "getPepLibData.R"
-#' @source "getChromatogramDatapoints.R"
-#' @source "plot_aligned.R"
-#' @source "plot_chrom_reference.R"
-#' @source "helpers.R"
-#' @source "uiTabs.R"
-#' @source "getmzPntrs.R"
 
 ## This should be done only if the user does not have the package, otherwise it will install everytime the app is run, and will be very slow for installing large packages.
 # if (!requireNamespace("BiocManager", quietly = TRUE))
@@ -45,8 +37,9 @@ library(shinyFiles)
 library(shinyWidgets)
 library(shinyBS)
 library(plotly)
-library(mstools)
-library(DIAlignR)
+library(DrawAlignR)
+# library(mstools)
+# library(DIAlignR)
 
 # withConsoleRedirect <- function(containerId, expr) {
 #   # Change type="output" to type="message" to catch stderr
@@ -66,6 +59,7 @@ source( "external/chromFile_Input_Button.R", local = TRUE )
 source( "external/libFile_Input_Button.R", local = TRUE )
 source( "external/oswFile_Input_Button.R", local = TRUE )
 source( "external/workingDirectory_Input.R", local = TRUE )
+source( "external/linkZoomEvent.R", local = TRUE )
 
 # UI ----------------------------------------------------------------------
 
@@ -107,19 +101,22 @@ ui <- fluidPage(
 # SERVER ------------------------------------------------------------------
 
 ## TODO: REMOVE THE LINE BELOW WHEN DEPLOYING STABLE VERSION
-lapply(list.files("../../R/", full.names = T), source )
-unzoom_double_click <<- NULL
+# print(list.files( getwd(), full.names = T, recursive = T) )
+# lapply(list.files("./R/", full.names = T), function( source_file ) { message(sprintf("Loading Source File: %s\n", source_file)); source(source_file, local = TRUE) } )
+# unzoom_double_click <<- NULLi
 server <- function(input, output, session) {
   
   server_help_description_text(input, output, session)
   
   ## reactive values object to store some re-usable stuff
-  values <- reactiveValues()
-  values$transition_selection_list <- list()
-  values$lib_df <- NULL
-  values$reference_plotted <- FALSE
-  values$drives <- shinyFiles::getVolumes()
-  values$plots <- list()
+  values <- reactiveValues(
+    transition_selection_list = list(),
+    lib_df = NULL,
+    reference_plotted = FALSE,
+    drives = shinyFiles::getVolumes(),
+    plots = list(),
+    mzPntrs = NULL
+  )
   global <- reactiveValues(
     datapath = '', 
     chromFile = '', 
@@ -130,8 +127,8 @@ server <- function(input, output, session) {
     chromTypes_available = "",
     plotly.autorange.x = T,
     plotly.autorange.y = T,
-    link_zoom_range_current = reactiveValues(),
-    unzoom_double_click = reactiveValues()
+    link_zoom_range_current = list(),
+    unzoom_double_click = NULL
   )
   output$chromTypes_available <- renderText({ '' })
   # link_zoom_ranges  <- reactiveValues(x = NULL, y = NULL)
@@ -139,6 +136,7 @@ server <- function(input, output, session) {
   makeReactiveBinding("brush")
   n_runs_index <- NULL
   out.plot.h <- NULL
+  mzPntrs <- NULL
   # link_zoom_ranges <- reactiveValues(`xaxis.range[0]`=NULL, `xaxis.range[1]`=NULL, `yaxis.range[0]`=NULL, `yaxis.range[1]`=NULL)
   # link_zoom_range_current <- reactiveValues(`xaxis.range[0]`=NULL, `xaxis.range[1]`=NULL, `yaxis.range[0]`=NULL, `yaxis.range[1]`=NULL)
   # link_zoom_range_current <- reactiveValues()
@@ -164,6 +162,28 @@ server <- function(input, output, session) {
       
       ## Observe OSWFile button
       oswFile_Input_Button(  input, output, global, values, session  )
+    
+    }
+  })
+  
+  ## Get mapping of runs to filename
+  observeEvent( {
+    global$oswFile
+    global$chromFile
+    input$chromType_Choice
+  },{
+    if ( input$chromType_Choice!='' | length(input$chromType_Choice) > 0){
+      ## Get mapping of runs to filename
+      if ( grepl(".*mzml", input$chromType_Choice) ){
+        use_chrom_ext <- "*.mzML|.chrom.mzML"
+      } else if ( grepl(".*sqmass", input$chromType_Choice) ){
+        use_chrom_ext <- "*.sqMass|.chrom.sqMass"
+      } else {
+        use_chrom_ext <- NULL
+      }
+      if ( !is.null(use_chrom_ext) & global$oswFile!='' & all(global$chromFile!='') ){
+        values$runs_filename_mapping <- getRunNames(oswFiles = global$oswFile, chromFiles = global$chromFile, oswMerged = TRUE, chrom_ext = use_chrom_ext)
+      }
     }
   })
   
@@ -203,13 +223,14 @@ server <- function(input, output, session) {
                 ##*******************************
                 output$bar <- renderPlot({
                   withProgress(message = sprintf('Cacheing %s mzML Chromatogram File(s)...', length(n_runs_index)),
-                               detail = 'This might take a while for large chromatogram files...', value = 0, {
-                                 mzPntrs <- getmzPntrs( input, global, progress=TRUE  )
+                               detail = 'This might take a while for large chromatogram files...', value = 0, expr = {
+                                 values$mzPntrs <- DrawAlignR::getmzPntrs( input, global, progress=TRUE  )
                                })
                 })
-                
+                # print(mzPntrs)
                 ## Store mzPntrs container
-                values$mzPntrs <- mzPntrs
+                # values$mzPntrs <- mzPntrs
+
               } 
               
             }
@@ -247,10 +268,10 @@ server <- function(input, output, session) {
                 output$bar <- renderPlot({
                   withProgress(message = sprintf('Cacheing %s mzML Chromatogram File(s)...', length(n_runs_index)),
                                detail = 'This might take a while for large chromatogram files...', value = 0, {
-                                 mzPntrs <- getsqMassPntrs(dataPath=input$WorkingDirectory, runs)
+                                 values$mzPntrs <- DrawAlignR::getsqMassPntrs(dataPath=input$WorkingDirectory, runs)
                                })
                 })
-                values$mzPntrs <- mzPntrs
+                # values$mzPntrs <- mzPntrs
               }
             }
           } else {
@@ -411,7 +432,6 @@ server <- function(input, output, session) {
       if ( !(input$Align)  ){
         if ( !is.null(input$n_runs) ) {
         message("Alignment option was not selected\n")
-        print(input$n_runs )
         #Generate all plots.
         # NOTE: Should we loop over each chrom file input, or loop over each selected n runs input
         for ( i in seq(1,length(input$n_runs)) ) {
@@ -444,7 +464,7 @@ server <- function(input, output, session) {
                 current_run_id <- rownames( values$runs_filename_mapping )[ values$runs_filename_mapping$runs %in% gsub("\\.\\w+", "", basename(chrom_input)) ]
                 manual_annotation_coordinates <- NULL
                 
-                cat( sprintf("chrom: %s\nosw: %s\nlib: %s\n", chrom_input, osw_input, global$libFile))
+                # cat( sprintf("chrom: %s\nosw: %s\nlib: %s\n", chrom_input, osw_input, global$libFile))
                 tictoc::tic("Plotting:")
                 out.plot.h <- curateXICplot( pep=naked_peptide, 
                                              uni_mod=peptide,
@@ -510,19 +530,15 @@ server <- function(input, output, session) {
         } # End For
         
         ## Observe zoom
-        output[['plot_run_']] <<- NULL
+        # output[['plot_run_']] <<- NULL
         for ( i in seq(1,length(input$n_runs)) ) {
           local({
             
             run_index <- input$n_runs[[i]]
             plotname <- paste("plot_run_", run_index, sep="")
             
-            
             output[[plotname]] <- renderPlotly({
               # output$log <- renderText( paste(log, collapse = '\n') )
-              
-              # cat( sprintf("LINE 538: global$plotly.autorange: %s\nlink_zoom_ranges$`xaxis.range[0]`[1]: %s\nlink_zoom_ranges$`xaxis.range[1]`[1]: %s\nlink_zoom_ranges$`yaxis.range[0]`[1]: %s\nlink_zoom_ranges$`yaxis.range[1]`[1]: %s\n",
-              #              global$plotly.autorange, as.character.null(link_zoom_range_current$`xaxis.range[0]`[1]), as.character.null(link_zoom_range_current$`xaxis.range[1]`[1]), as.character.null(link_zoom_range_current$`yaxis.range[0]`[1]), as.character.null(link_zoom_range_current$`yaxis.range[1]`[1]) ) )
               
               if ( (input$plotly.linkedzooming.x==FALSE & input$plotly.linkedzooming.y==FALSE) || (global$plotly.autorange.x==TRUE & global$plotly.autorange.y==TRUE)  ){
                 cat("\nNo Link Zoom/reset\n")
@@ -543,6 +559,7 @@ server <- function(input, output, session) {
               
             }) # End renderPlotly
             
+            ## Get zoom events and unzoom events for linked zooming
             linkZoomEvent( input, output, values, global, session, plotname )
             
           }) # End Local
@@ -555,12 +572,12 @@ server <- function(input, output, session) {
         cat('Alignment Option was selected\n')
         
         AlignObj_List <- list()
-        values$AlignObj_List <<- AlignObj_List
+        values$AlignObj_List <- AlignObj_List
         for ( i in input$Experiment ) {
-          
+          local({
           
           print("Start Experiment Alignment")
-          print(paste("Current Exp: ", i, sep=""))
+          # print(paste("Current Exp: ", i, sep=""))
           
           # Define Experiment_i
           current_experiment <- i
@@ -577,27 +594,26 @@ server <- function(input, output, session) {
                 
                 tictoc::tic("DIAlignR Elapsed Time")
                 dataPath <- input$WorkingDirectory
-                analytes <- paste(input$Mod, "_", toString(input$Charge), sep="")
+                analytes <- paste( input$Mod, "_", toString(input$Charge), sep="") 
                 runs <- c(input$Reference, current_experiment)
-                cat( sprintf( "Reference: %s\nExperiment: %s\n", input$Reference, current_experiment))
-                # cat( sprintf( "Runs: %s\n", runs ) )
-                mzPntrs <- values$mzPntrs
-                suppressWarnings(
-                  AlignObjOutput <- getAlignObjs(analytes = analytes, runs = runs, dataPath = dataPath, refRun = input$Reference, 
+                cat( sprintf( "analytes: %s\nReference: %s\nExperiment: %s\n", analytes, input$Reference, current_experiment))
+                
+                # suppressWarnings(
+                  AlignObjOutput <- DrawAlignR::getAlignObjs(analytes = analytes, runs = runs, dataPath = dataPath, refRun = input$Reference, 
                                                  analyteInGroupLabel = input$analyteInGroupLabel, identifying = input$identifying, 
-                                                 oswMerged = input$oswMerged, nameCutPattern = input$nameCutPattern, chrom_ext=".chrom.sqMass",
+                                                 oswMerged = input$oswMerged, nameCutPattern = input$nameCutPattern, chrom_ext=".chrom.mzML",
                                                  maxFdrQuery = input$maxFdrQuery, maxFdrLoess = input$maxFdrLoess, analyteFDR = input$analyteFDR, 
                                                  spanvalue = input$spanvalue,  normalization = input$normalization, simMeasure = input$simMeasure,
                                                  XICfilter = input$XICfilter, SgolayFiltOrd = input$SgolayFiltOrd, SgolayFiltLen = input$SgolayFiltLen,
                                                  goFactor = input$goFactor, geFactor = input$geFactor, cosAngleThresh = input$cosAngleThresh, OverlapAlignment = input$OverlapAlignment,
                                                  dotProdThresh = input$dotProdThresh, gapQuantile = input$gapQuantile, hardConstrain = input$hardConstrain, 
                                                  samples4gradient = input$samples4gradient,  samplingTime = input$samplingTime,  RSEdistFactor = input$RSEdistFactor, 
-                                                 objType = "light", mzPntrs = mzPntrs, runType = "DIA_Proteomics_ipf")
-                )
+                                                 objType = "light", mzPntrs = values$mzPntrs, runType = input$runType)
+                # )
                 tictoc::toc()
                 cat("\n")
                 
-                values$AlignObj_List[[current_experiment]] <<- AlignObjOutput
+                values$AlignObj_List[[current_experiment]] <- AlignObjOutput
                 cat( sprintf("Added %s to list of aligned objects.\n Total in list now: %s\n", current_experiment, paste(names( values$AlignObj_List), collapse=", ") ) )
               }, 
               error = function(e){
@@ -607,7 +623,7 @@ server <- function(input, output, session) {
             ) # End tryCatch
             
           }
-          
+        }) # End of local
         } # End for loop
         
         # observeEvent( input$OriginalRTAnnotation, {
@@ -657,25 +673,23 @@ server <- function(input, output, session) {
                     # local({
                     plotname <- paste("plot_run_", values$run_index_map[[ input$Reference ]], sep="")
                     cat(sprintf("Plotname: %s for run: %s\n", plotname, input$Reference))
-                    # output[[ plotname ]] <- renderPlotly({
-                    #   
-                    #   pt1 <- plotly::ggplotly( (k$prefU), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
-                    #     layout(title = list(text = paste0(k$prefU$labels$title,
-                    #                                       '<br>',
-                    #                                       '<sup>',
-                    #                                       gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', k$prefU$labels$subtitle)),
-                    #                                       '</sup>')))
-                    #   
-                    #   
-                    # }) # End renderPlotly
+                    output[[ plotname ]] <- renderPlotly({
+
+                      pt1 <- plotly::ggplotly( (k$prefU), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
+                        layout(title = list(text = paste0(k$prefU$labels$title,
+                                                          '<br>',
+                                                          '<sup>',
+                                                          gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', k$prefU$labels$subtitle)),
+                                                          '</sup>')))
+
+
+                    }) # End renderPlotlyi
                     
-                    output[[ plotname ]] <- renderPlot({
-                      
-                      k$prefU +
-                        ggplot2::coord_cartesian(xlim = link_zoom_ranges$x, ylim = link_zoom_ranges$y, expand = FALSE)
-                      
-                      
-                    }) # End renderPlotly
+                    # output[[ plotname ]] <- renderPlot({
+                    #   
+                    #   k$prefU +
+                    #     ggplot2::coord_cartesian(xlim = link_zoom_ranges$x, ylim = link_zoom_ranges$y, expand = FALSE)
+                    # }) # End renderPlotly
                     
                     values$reference_plotted <- TRUE
                     cat("Successfully plotted reference\n")
@@ -695,17 +709,17 @@ server <- function(input, output, session) {
                   # local({
                   plotname <- paste("plot_run_", run_index, sep="")
                   cat(sprintf("Plotname: %s for run: %s\n", plotname, current_experiment))
-                  output[[ plotname ]] <- renderPlot({
+                  output[[ plotname ]] <- renderPlotly({
                     
-                    # pt3 <- plotly::ggplotly( (k$peXpA), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
-                    #   layout(title = list(text = paste0(k$peXpA$labels$title,
-                    #                                     '<br>',
-                    #                                     '<sup>',
-                    #                                     gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', k$peXpA$labels$subtitle)),
-                    #                                     '</sup>')))
+                    pt3 <- plotly::ggplotly( (k$peXpA), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
+                      layout(title = list(text = paste0(k$peXpA$labels$title,
+                                                        '<br>',
+                                                        '<sup>',
+                                                        gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', k$peXpA$labels$subtitle)),
+                                                        '</sup>')))
                     
-                    k$peXpA +
-                      ggplot2::coord_cartesian(xlim = link_zoom_ranges$x, ylim = link_zoom_ranges$y, expand = FALSE)
+                    # k$peXpA +
+                    #   ggplot2::coord_cartesian(xlim = link_zoom_ranges$x, ylim = link_zoom_ranges$y, expand = FALSE)
                     
                     
                   }) # End renderPlotly
