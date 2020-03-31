@@ -5,7 +5,9 @@
 \title{Get names of all runs}
 \usage{
 getRunNames(
-  dataPath,
+  dataPath = NULL,
+  oswFiles = NULL,
+  chromFiles = NULL,
   oswMerged = TRUE,
   nameCutPattern = "(.*)(/)(.*)",
   chrom_ext = ".chrom.mzML"
@@ -13,6 +15,10 @@ getRunNames(
 }
 \arguments{
 \item{dataPath}{(char) Path to mzml and osw directory.}
+
+\item{oswFiles}{(char) Path to OSW file(s) if supplied implicitly.}
+
+\item{chromFiles}{(char) Path to chromatogram files if supplied implicitly.}
 
 \item{oswMerged}{(logical) TRUE for experiment-wide FDR and FALSE for run-specific FDR by pyprophet.}
 

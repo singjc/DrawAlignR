@@ -12,6 +12,7 @@ getAnalytes(
   commonAnalytes = FALSE,
   maxFdrQuery = 0.05,
   nameCutPattern = "(.*)(/)(.*)",
+  chrom_ext = ".chrom.mzML",
   analyteInGroupLabel = FALSE
 )
 }
