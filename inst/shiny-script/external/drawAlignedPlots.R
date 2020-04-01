@@ -1,4 +1,6 @@
 drawAlignedPlots <- function( input, output, global, values, session ){
+  withProgress(message = sprintf('Drawing Plots for %s runs...', length(input$n_runs)),
+               detail = 'Draw chromatogram and alignment path plots...', value = 0, expr = {
 ## Observe zoom
 # output[['plot_run_']] <<- NULL
 for ( i in seq(1,length(input$n_runs)) ) {
@@ -65,5 +67,7 @@ for ( i in seq(1,length(input$n_runs)) ) {
     )
     
   }) # End Local
+  incProgress(1/length(input$n_runs))
 } # End for
+               }) # End of Progress Tracker
 }

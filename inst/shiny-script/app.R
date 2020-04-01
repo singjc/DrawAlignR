@@ -158,6 +158,7 @@ server <- function(input, output, session) {
   # link_zoom_ranges <- list(`xaxis.range[0]`=1650, `xaxis.range[1]`=1900, `yaxis.range[0]`=0, `yaxis.range[1]`=15000)
   
   
+  # Show/Hide Output Tabs ---------------------------------------------------
   observe( {
     if (input$Align==TRUE){
       showTab(inputId = "output_tabs", target = "pathPlot")
@@ -189,7 +190,7 @@ server <- function(input, output, session) {
       
       ## Observe OSWFile button
       oswFile_Input_Button(  input, output, global, values, session  )
-    
+      
     }
   })
   
@@ -257,7 +258,7 @@ server <- function(input, output, session) {
                 # print(mzPntrs)
                 ## Store mzPntrs container
                 # values$mzPntrs <- mzPntrs
-
+                
               } 
               
             }
@@ -482,9 +483,9 @@ server <- function(input, output, session) {
     link_zoom_ranges$y <- NULL
   })
   
-
+  
   # oswTable Output ---------------------------------------------------------
-
+  
   observeEvent(input$n_runs,{
     #Generate set of variable oswtables
     output$oswtables <- renderUI({
@@ -494,7 +495,7 @@ server <- function(input, output, session) {
         
         tablename <- paste("oswtable_run_", run_index, sep="")
         message(sprintf("Creating osw table: %s\n", tablename))
-      
+        
         DT::dataTableOutput(tablename)
         
       })
@@ -515,222 +516,239 @@ server <- function(input, output, session) {
     }, {
       if ( !(input$Align)  ){
         if ( !is.null(input$n_runs) ) {
-        message("Alignment option was not selected\n")
-        #Generate all plots.
-        # NOTE: Should we loop over each chrom file input, or loop over each selected n runs input
-        for ( i in seq(1,length(input$n_runs)) ) {
-          local({
-            my_i <- i
-            run_index <- input$n_runs[[i]]
-            plotname <- paste("plot_run_", run_index, sep="")
-            
-            
-            #If alignment is disabled, generate standard chromatogram plot.
-            ## Warning Handles
-            if (  all(unlist(lapply( unique(basename(unlist(global$chromFile))), function(x){!grepl(".*mzML$|.*sqMass$", x)}))) ) {
-              warning('A Chromgatogram file(s) was not supplied or not found')
-            } else if ( !grepl(".*pqp$", global$libFile) ){
-              warning("A Library File was not supplied or not found")
-            } else if ( !grepl(".*osw$", global$oswFile) ){
-              warning("A Merged OSW Results File was not supplied or not found")
-            } else if (is.null(input$Mod)){
-              warning("There was no peptide(s) found")
-            }
-            
-            
-            tryCatch(
-              expr = {
-                chrom_input <- global$chromFile[[my_i]]
-                osw_input <- global$oswFile[[1]]
-                peptide <- input$Mod
-                modification_labels <- regmatches(peptide, gregexpr("\\(.*?\\)", peptide))[[1]]
-                naked_peptide <-  gsub( paste(gsub('\\)','\\\\)',gsub('\\(','\\\\(',modification_labels)), collapse = '|'), '', peptide )
-                current_run_id <- rownames( values$runs_filename_mapping )[ values$runs_filename_mapping$runs %in% gsub("\\.\\w+", "", basename(chrom_input)) ]
-                manual_annotation_coordinates <- NULL
-                
-                # cat( sprintf("chrom: %s\nosw: %s\nlib: %s\n", chrom_input, osw_input, global$libFile))
-                tictoc::tic("Plotting:")
-                out.plot.h <- curateXICplot( pep=naked_peptide, 
-                                             uni_mod=peptide,
-                                             in_sqMass=chrom_input,  df_lib=values$lib_df, in_osw=osw_input, df_osw=values$osw_df,
-                                             plotPrecursor=input$Precursor,
-                                             plotDetecting=input$Detecting,
-                                             plotIdentifying=input$Identifying_Unique,
-                                             plotIdentifying.Unique=input$Identifying_Unique,
-                                             plotIdentifying.Shared=F,
-                                             plotIdentifying.Against=F,
-                                             doFacetZoom=F,
-                                             doPlot=T,
-                                             Charge_State=input$Charge,
-                                             printPlot=F,
-                                             store_plots_subdir=NULL,
-                                             use_top_trans_pep=F,
-                                             transition_selection_list=values$transition_selection_list,
-                                             show_n_transitions=input$nIdentifyingTransitions,
-                                             show_transition_scores=input$ShowTransitionScores,
-                                             show_all_pkgrprnk=input$ShowAllPkGrps,
-                                             show_manual_annotation = manual_annotation_coordinates,
-                                             show_peak_info_tbl=F,
-                                             show_legend=T,
-                                             mzPntrs=values$mzPntrs[[current_run_id]]
-                )
-                
-                tictoc::toc()
-              }, 
-              error = function(e){
-                message(sprintf("[curateXICplot] There was the following error that occured during curateXICplot function call: %s\n", e$message))
-              }
-            ) # End tryCatch
-            
-            tryCatch(
-              expr = {    
-                
-                ## Old method using plotly
-                plotly::ggplotly( p = (out.plot.h), source = plotname, tooltip = c("x", "y", "text"), dynamicTicks = T ) %>%
-                  plotly::layout(title = list( text = unique(paste0(out.plot.h$labels$title,
-                                                                    '<br>',
-                                                                    '<sup>',
-                                                                    gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', out.plot.h$labels$subtitle)),
-                                                                    '</sup>')) ) ) %>%
-                  event_register(event="plotly_relayout") -> p.out
-                
-                values$plots[[plotname]] <- p.out
-                
-                values$plots_org[[plotname]] <- p.out 
-                
-                global$link_zoom_range_current[[plotname]] <<- reactiveValues(`xaxis.range[0]`=values$plots_org[[plotname]]$x$layout$xaxis$range[1], `xaxis.range[1]`=values$plots_org[[plotname]]$x$layout$xaxis$range[2],
-                                                                       `yaxis.range[0]`=values$plots_org[[plotname]]$x$layout$yaxis$range[1], `yaxis.range[1]`=values$plots_org[[plotname]]$x$layout$yaxis$range[2])
-                
-                global$unzoom_double_click[[plotname]] <- NULL
-              }, 
-              error = function(e){
-                message(sprintf("[rendering XIC] There was the following error that occured during XIC rendering: %s\n", e$message))
-              }
-            ) # End tryCatch
-            
-            
-            
-          }) # End local
-        } # End For
-        
-        ## Observe zoom
-        # output[['plot_run_']] <<- NULL
-        for ( i in seq(1,length(input$n_runs)) ) {
-          local({
-            
-            ##********************************************************
-            ##  Chromatogram Plot Output
-            ##********************************************************
-            run_index <- input$n_runs[[i]]
-            plotname <- paste("plot_run_", run_index, sep="")
-            
-            output[[plotname]] <- renderPlotly({
-              # output$log <- renderText( paste(log, collapse = '\n') )
-              
-              if ( (input$plotly.linkedzooming.x==FALSE & input$plotly.linkedzooming.y==FALSE) || (global$plotly.autorange.x==TRUE & global$plotly.autorange.y==TRUE)  ){
-                cat("\nNo Link Zoom/reset\n")
-                # global$unzoom_double_click <- NULL
-                # js$resetDoubleClick()
-                values$plots[[plotname]] %>% 
-                  plotly::config( displayModeBar = input$plotly.displayModeBar )
-        
-              } else {
-                cat( sprintf("\nLink Zoom:\nautorange.x=%s\nautorange.y=%s\n%s\n", global$plotly.autorange.x[1], global$plotly.autorange.y[1], listTostring(reactiveValuesToList( global$link_zoom_range_current[[plotname]]))) )
-                values$plots[[plotname]] %>% 
-                  plotly::config( displayModeBar = input$plotly.displayModeBar ) %>%
-                  plotly::layout(
-                    xaxis = list( autorange=global$plotly.autorange.x[1], range=as.double(c(reactiveValuesToList( global$link_zoom_range_current[[plotname]])$`xaxis.range[0]`[1], reactiveValuesToList( global$link_zoom_range_current[[plotname]])$`xaxis.range[1]`[1])) ), 
-                    yaxis = list( autorange=global$plotly.autorange.y[1], range=as.double(c(reactiveValuesToList( global$link_zoom_range_current[[plotname]])$`yaxis.range[0]`[1], reactiveValuesToList( global$link_zoom_range_current[[plotname]])$`yaxis.range[1]`[1])) )
-                  ) 
-              }
-              
-            }) # End renderPlotly
-            
-            ## Get zoom events and unzoom events for linked zooming
-            linkZoomEvent( input, output, values, global, session, plotname )
-            
-            
-            
-            ##********************************************************
-            ##  oswTable Output
-            ##********************************************************
-            ## Get Table tag id            
-            tablename <- paste("oswtable_run_", run_index, sep="")
-            ## Get current filename to filter table
-            ms_file_runname <- values$runs_filename_mapping$filename[ values$runs_filename_mapping$runs %in% gsub("\\.\\w+", "", basename(global$chromFile[[i]])) ]
-            ## Render Table            
-            output[[tablename]] <- DT::renderDataTable(
-              values$osw_df %>%
-                dplyr::filter( FullPeptideName==input$Mod & Charge==input$Charge ) %>%
-                dplyr::mutate( filename = basename(filename) ) %>%
-                dplyr::filter( filename== basename(ms_file_runname) ) %>%
-              dplyr::select( "filename", "Charge", "mz", "Intensity", "RT", "assay_rt", "leftWidth", "rightWidth", "ms2_pep", "peak_group_rank", "d_score", dplyr::contains("ms2_m_score"), "m_score", dplyr::contains("original_assay") ) 
-            )
-            
-          }) # End Local
-        } # End for
-        
-        
-        
-      } # End !is.null(input$n_runs)
+          message("Alignment option was not selected\n")
+          withProgress(message = sprintf('Generating Chromatogram Plots for  %s runs...', length(input$n_runs)),
+                       detail = 'Extracting Ion Chromatogram Traces...', value = 0, expr = {
+                         #Generate all plots.
+                         # NOTE: Should we loop over each chrom file input, or loop over each selected n runs input
+                         for ( i in seq(1,length(input$n_runs)) ) {
+                           local({
+                             my_i <- i
+                             run_index <- input$n_runs[[i]]
+                             plotname <- paste("plot_run_", run_index, sep="")
+                             
+                             
+                             #If alignment is disabled, generate standard chromatogram plot.
+                             ## Warning Handles
+                             if (  all(unlist(lapply( unique(basename(unlist(global$chromFile))), function(x){!grepl(".*mzML$|.*sqMass$", x)}))) ) {
+                               warning('A Chromgatogram file(s) was not supplied or not found')
+                             } else if ( !grepl(".*pqp$", global$libFile) ){
+                               warning("A Library File was not supplied or not found")
+                             } else if ( !grepl(".*osw$", global$oswFile) ){
+                               warning("A Merged OSW Results File was not supplied or not found")
+                             } else if (is.null(input$Mod)){
+                               warning("There was no peptide(s) found")
+                             }
+                             
+                             
+                             tryCatch(
+                               expr = {
+                                 chrom_input <- global$chromFile[[my_i]]
+                                 osw_input <- global$oswFile[[1]]
+                                 peptide <- input$Mod
+                                 modification_labels <- regmatches(peptide, gregexpr("\\(.*?\\)", peptide))[[1]]
+                                 naked_peptide <-  gsub( paste(gsub('\\)','\\\\)',gsub('\\(','\\\\(',modification_labels)), collapse = '|'), '', peptide )
+                                 current_run_id <- rownames( values$runs_filename_mapping )[ values$runs_filename_mapping$runs %in% gsub("\\.\\w+", "", basename(chrom_input)) ]
+                                 manual_annotation_coordinates <- NULL
+                                 
+                                 # cat( sprintf("chrom: %s\nosw: %s\nlib: %s\n", chrom_input, osw_input, global$libFile))
+                                 tictoc::tic("Plotting:")
+                                 out.plot.h <- curateXICplot( pep=naked_peptide, 
+                                                              uni_mod=peptide,
+                                                              in_sqMass=chrom_input,  df_lib=values$lib_df, in_osw=osw_input, df_osw=values$osw_df,
+                                                              plotPrecursor=input$Precursor,
+                                                              plotDetecting=input$Detecting,
+                                                              plotIdentifying=input$Identifying_Unique,
+                                                              plotIdentifying.Unique=input$Identifying_Unique,
+                                                              plotIdentifying.Shared=F,
+                                                              plotIdentifying.Against=F,
+                                                              doFacetZoom=F,
+                                                              doPlot=T,
+                                                              Charge_State=input$Charge,
+                                                              printPlot=F,
+                                                              store_plots_subdir=NULL,
+                                                              use_top_trans_pep=F,
+                                                              transition_selection_list=values$transition_selection_list,
+                                                              show_n_transitions=input$nIdentifyingTransitions,
+                                                              show_transition_scores=input$ShowTransitionScores,
+                                                              show_all_pkgrprnk=input$ShowAllPkGrps,
+                                                              show_manual_annotation = manual_annotation_coordinates,
+                                                              show_peak_info_tbl=F,
+                                                              show_legend=T,
+                                                              mzPntrs=values$mzPntrs[[current_run_id]]
+                                 )
+                                 
+                                 tictoc::toc()
+                               }, 
+                               error = function(e){
+                                 message(sprintf("[curateXICplot] There was the following error that occured during curateXICplot function call: %s\n", e$message))
+                               }
+                             ) # End tryCatch
+                             
+                             tryCatch(
+                               expr = {    
+                                 
+                                 ## Old method using plotly
+                                 plotly::ggplotly( p = (out.plot.h), source = plotname, tooltip = c("x", "y", "text"), dynamicTicks = T ) %>%
+                                   plotly::layout(title = list( text = unique(paste0(out.plot.h$labels$title,
+                                                                                     '<br>',
+                                                                                     '<sup>',
+                                                                                     gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', out.plot.h$labels$subtitle)),
+                                                                                     '</sup>')) ) ) %>%
+                                   event_register(event="plotly_relayout") -> p.out
+                                 
+                                 values$plots[[plotname]] <- p.out
+                                 
+                                 values$plots_org[[plotname]] <- p.out 
+                                 
+                                 global$link_zoom_range_current[[plotname]] <<- reactiveValues(`xaxis.range[0]`=values$plots_org[[plotname]]$x$layout$xaxis$range[1], `xaxis.range[1]`=values$plots_org[[plotname]]$x$layout$xaxis$range[2],
+                                                                                               `yaxis.range[0]`=values$plots_org[[plotname]]$x$layout$yaxis$range[1], `yaxis.range[1]`=values$plots_org[[plotname]]$x$layout$yaxis$range[2])
+                                 
+                                 global$unzoom_double_click[[plotname]] <- NULL
+                               }, 
+                               error = function(e){
+                                 message(sprintf("[rendering XIC] There was the following error that occured during XIC rendering: %s\n", e$message))
+                               }
+                             ) # End tryCatch
+                             
+                             
+                             
+                           }) # End local
+                           ## Track progress
+                           incProgress(1/length(input$n_runs))
+                         } # End For
+                         
+                       }) # End of Progress Tracker
+          
+          ## Observe zoom
+          withProgress(message = sprintf('Drawing Chromatogram Plots for  %s runs...', length(input$n_runs)),
+                       detail = 'Draw Extracted Ion Chromatograms...', value = 0, expr = {
+                         # output[['plot_run_']] <<- NULL
+                         for ( i in seq(1,length(input$n_runs)) ) {
+                           local({
+                             
+                             ##********************************************************
+                             ##  Chromatogram Plot Output
+                             ##********************************************************
+                             run_index <- input$n_runs[[i]]
+                             plotname <- paste("plot_run_", run_index, sep="")
+                             
+                             output[[plotname]] <- renderPlotly({
+                               # output$log <- renderText( paste(log, collapse = '\n') )
+                               
+                               if ( (input$plotly.linkedzooming.x==FALSE & input$plotly.linkedzooming.y==FALSE) || (global$plotly.autorange.x==TRUE & global$plotly.autorange.y==TRUE)  ){
+                                 cat("\nNo Link Zoom/reset\n")
+                                 # global$unzoom_double_click <- NULL
+                                 # js$resetDoubleClick()
+                                 values$plots[[plotname]] %>% 
+                                   plotly::config( displayModeBar = input$plotly.displayModeBar )
+                                 
+                               } else {
+                                 cat( sprintf("\nLink Zoom:\nautorange.x=%s\nautorange.y=%s\n%s\n", global$plotly.autorange.x[1], global$plotly.autorange.y[1], listTostring(reactiveValuesToList( global$link_zoom_range_current[[plotname]]))) )
+                                 values$plots[[plotname]] %>% 
+                                   plotly::config( displayModeBar = input$plotly.displayModeBar ) %>%
+                                   plotly::layout(
+                                     xaxis = list( autorange=global$plotly.autorange.x[1], range=as.double(c(reactiveValuesToList( global$link_zoom_range_current[[plotname]])$`xaxis.range[0]`[1], reactiveValuesToList( global$link_zoom_range_current[[plotname]])$`xaxis.range[1]`[1])) ), 
+                                     yaxis = list( autorange=global$plotly.autorange.y[1], range=as.double(c(reactiveValuesToList( global$link_zoom_range_current[[plotname]])$`yaxis.range[0]`[1], reactiveValuesToList( global$link_zoom_range_current[[plotname]])$`yaxis.range[1]`[1])) )
+                                   ) 
+                               }
+                               
+                             }) # End renderPlotly
+                             
+                             ## Get zoom events and unzoom events for linked zooming
+                             linkZoomEvent( input, output, values, global, session, plotname )
+                             
+                             
+                             
+                             ##********************************************************
+                             ##  oswTable Output
+                             ##********************************************************
+                             ## Get Table tag id            
+                             tablename <- paste("oswtable_run_", run_index, sep="")
+                             ## Get current filename to filter table
+                             ms_file_runname <- values$runs_filename_mapping$filename[ values$runs_filename_mapping$runs %in% gsub("\\.\\w+", "", basename(global$chromFile[[i]])) ]
+                             ## Render Table            
+                             output[[tablename]] <- DT::renderDataTable(
+                               values$osw_df %>%
+                                 dplyr::filter( FullPeptideName==input$Mod & Charge==input$Charge ) %>%
+                                 dplyr::mutate( filename = basename(filename) ) %>%
+                                 dplyr::filter( filename== basename(ms_file_runname) ) %>%
+                                 dplyr::select( "filename", "Charge", "mz", "Intensity", "RT", "assay_rt", "leftWidth", "rightWidth", "ms2_pep", "peak_group_rank", "d_score", dplyr::contains("ms2_m_score"), "m_score", dplyr::contains("original_assay") ) 
+                             )
+                             
+                           }) # End Local
+                           incProgress(1/length(input$n_runs))
+                         } # End for
+                       }) # End of Progress Tracker
+          
+          
+        } # End !is.null(input$n_runs)
       } else {
         cat('Alignment Option was selected\n')
         
-        AlignObj_List <- list()
-        values$AlignObj_List <- AlignObj_List
-        for ( i in input$Experiment ) {
-          local({
-          
-          # print("Start Experiment Alignment")
-          # print(paste("Current Exp: ", i, sep=""))
-          
-          # Define Experiment_i
-          current_experiment <- i
-          # Get run Indec
-          run_index <- values$run_index_map[[ current_experiment ]]
-          cat( sprintf("Working on Experiment %s with Run Index: %s\n", current_experiment, run_index) )
-          
-          #Ensuring at least two runs selected, not conducting alignment against same run
-          if ( !(input$Reference == gsub('...........$', '', current_experiment )) ) {
-            
-            
-            tryCatch(
-              expr = {  
-                
-                tictoc::tic("DIAlignR Elapsed Time")
-                dataPath <- input$WorkingDirectory
-                analytes <- paste( input$Mod, "_", toString(input$Charge), sep="") 
-                runs <- c(input$Reference, current_experiment)
-                cat( sprintf( "analytes: %s\nReference: %s\nExperiment: %s\n", analytes, input$Reference, current_experiment))
-                
-                # suppressWarnings(
-                  AlignObjOutput <- DrawAlignR::getAlignObjs(analytes = analytes, runs = runs, dataPath = dataPath, refRun = input$Reference, 
-                                                 analyteInGroupLabel = input$analyteInGroupLabel, identifying = input$identifying, 
-                                                 oswMerged = input$oswMerged, nameCutPattern = input$nameCutPattern, chrom_ext=".chrom.mzML",
-                                                 maxFdrQuery = input$maxFdrQuery, maxFdrLoess = input$maxFdrLoess, analyteFDR = input$analyteFDR, 
-                                                 spanvalue = input$spanvalue,  normalization = input$normalization, simMeasure = input$simMeasure,
-                                                 XICfilter = input$XICfilter, SgolayFiltOrd = input$SgolayFiltOrd, SgolayFiltLen = input$SgolayFiltLen,
-                                                 goFactor = input$goFactor, geFactor = input$geFactor, cosAngleThresh = input$cosAngleThresh, OverlapAlignment = input$OverlapAlignment,
-                                                 dotProdThresh = input$dotProdThresh, gapQuantile = input$gapQuantile, hardConstrain = input$hardConstrain, 
-                                                 samples4gradient = input$samples4gradient,  samplingTime = input$samplingTime,  RSEdistFactor = input$RSEdistFactor, 
-                                                 objType = "medium ", mzPntrs = values$mzPntrs, runType = input$runType)
-                # )
-                tictoc::toc()
-                cat("\n")
-                
-                values$AlignObj_List[[current_experiment]] <- AlignObjOutput
-                cat( sprintf("Added %s to list of aligned objects.\n Total in list now: %s\n", current_experiment, paste(names( values$AlignObj_List), collapse=", ") ) )
-              }, 
-              error = function(e){
-                message(sprintf("[Alignment] There was the following error that occured during Alignment: %s\n", e$message))
-                values$AlignObj_List[[current_experiment]] <<- e$message
-              }
-            ) # End tryCatch
-            
-          }
-        }) # End of local
-        } # End for loop
-       
+        withProgress(message = sprintf('Performing alignment for  %s runs...', length(input$Experiment)),
+                     detail = 'Dynamic Programming Alignment...', value = 0, expr = {
+                       AlignObj_List <- list()
+                       values$AlignObj_List <- AlignObj_List
+                       for ( i in input$Experiment ) {
+                         local({
+                           
+                           # print("Start Experiment Alignment")
+                           # print(paste("Current Exp: ", i, sep=""))
+                           
+                           # Define Experiment_i
+                           current_experiment <- i
+                           # Get run Indec
+                           run_index <- values$run_index_map[[ current_experiment ]]
+                           cat( sprintf("Working on Experiment %s with Run Index: %s\n", current_experiment, run_index) )
+                           
+                           #Ensuring at least two runs selected, not conducting alignment against same run
+                           if ( !(input$Reference == gsub('...........$', '', current_experiment )) ) {
+                             
+                             
+                             tryCatch(
+                               expr = {  
+                                 
+                                 tictoc::tic("DIAlignR Elapsed Time")
+                                 dataPath <- input$WorkingDirectory
+                                 analytes <- paste( input$Mod, "_", toString(input$Charge), sep="") 
+                                 runs <- c(input$Reference, current_experiment)
+                                 cat( sprintf( "analytes: %s\nReference: %s\nExperiment: %s\n", analytes, input$Reference, current_experiment))
+                                 
+                                 # suppressWarnings(
+                                 AlignObjOutput <- DrawAlignR::getAlignObjs(analytes = analytes, runs = runs, dataPath = dataPath, refRun = input$Reference, 
+                                                                            analyteInGroupLabel = input$analyteInGroupLabel, identifying = input$identifying, 
+                                                                            oswMerged = input$oswMerged, nameCutPattern = input$nameCutPattern, chrom_ext=".chrom.mzML",
+                                                                            maxFdrQuery = input$maxFdrQuery, maxFdrLoess = input$maxFdrLoess, analyteFDR = input$analyteFDR, 
+                                                                            spanvalue = input$spanvalue,  normalization = input$normalization, simMeasure = input$simMeasure,
+                                                                            XICfilter = input$XICfilter, SgolayFiltOrd = input$SgolayFiltOrd, SgolayFiltLen = input$SgolayFiltLen,
+                                                                            goFactor = input$goFactor, geFactor = input$geFactor, cosAngleThresh = input$cosAngleThresh, OverlapAlignment = input$OverlapAlignment,
+                                                                            dotProdThresh = input$dotProdThresh, gapQuantile = input$gapQuantile, hardConstrain = input$hardConstrain, 
+                                                                            samples4gradient = input$samples4gradient,  samplingTime = input$samplingTime,  RSEdistFactor = input$RSEdistFactor, 
+                                                                            objType = "medium ", mzPntrs = values$mzPntrs, runType = input$runType)
+                                 # )
+                                 tictoc::toc()
+                                 cat("\n")
+                                 
+                                 values$AlignObj_List[[current_experiment]] <- AlignObjOutput
+                                 cat( sprintf("Added %s to list of aligned objects.\n Total in list now: %s\n", current_experiment, paste(names( values$AlignObj_List), collapse=", ") ) )
+                               }, 
+                               error = function(e){
+                                 message(sprintf("[Alignment] There was the following error that occured during Alignment: %s\n", e$message))
+                                 values$AlignObj_List[[current_experiment]] <<- e$message
+                               }
+                             ) # End tryCatch
+                             
+                           }
+                         }) # End of local
+                         ## Track progress
+                         incProgress(1/length(input$Experiment))
+                       } # End for loop
+                       
+                     }) # End of Progress Tracker
+        
+        
+        
         ##***********************************************
         ##    Alignment Plotting Events
         ##***********************************************
