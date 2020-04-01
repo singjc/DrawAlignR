@@ -41,17 +41,7 @@ library(DrawAlignR)
 # library(mstools)
 # library(DIAlignR)
 
-withConsoleRedirect <- function(containerId, expr) {
-  # Change type="output" to type="message" to catch stderr
-  # (messages, warnings, and errors) instead of stdout.
-  txt <- capture.output( results <- expr, type = c("message") )
-    if (length(txt) > 0) {
-    insertUI(paste0("#", containerId), where = "afterBegin",
-             ui = paste0(rev(txt), "\n", collapse = "")
-    )
-  }
-  results
-}
+
 
 source( "external/uiTabs.R", local = TRUE )
 source( "external/server_help_description_text.R", local = TRUE )
@@ -63,6 +53,7 @@ source( "external/linkZoomEvent.R", local = TRUE )
 source( "external/cacheAlignmentPlots.R", local = TRUE )
 source( "external/drawAlignedPlots.R", local = TRUE )
 source( "external/clearPlots.R", local = TRUE )
+source( "external/withConsoleRedirect.R", local = TRUE )
 
 # UI ----------------------------------------------------------------------
 
@@ -190,6 +181,7 @@ server <- function(input, output, session) {
   #   User may switch between using a working directory or
   #   supply each individual file
   observeEvent( input$WorkingDirectoryInput, {
+    withConsoleRedirect("console", {
     message("Welcome! Have fun Aligning! =)")
     if ( input$WorkingDirectoryInput ){
       # cat("values$drives: ", names(values$drives()), "\n", sep="")
@@ -210,6 +202,7 @@ server <- function(input, output, session) {
       oswFile_Input_Button(  input, output, global, values, session  )
       
     }
+    })
   })
   
   ## Get mapping of runs to filename
@@ -240,6 +233,7 @@ server <- function(input, output, session) {
     input$chromType_Choice
     global$datapath
   } , {
+    withConsoleRedirect("console", {
     if ( input$chromType_Choice!='' ){
       message( sprintf("Using chromtype: %s", input$chromType_Choice) )
       tryCatch(
@@ -347,13 +341,15 @@ server <- function(input, output, session) {
         }
       ) # End tryCatch
     }
-  })
+  }) # end withConsoleRedirect
+  }) # End observer
   
   # Reference and Experiment Input Events -----------------------------------
   
   
   ## Observe Reference input
   observeEvent( input$Reference, {
+    withConsoleRedirect("console", {
     ## Get Reference Run
     values$Reference <- input$Reference
     if ( values$Reference!=values$Previous_Reference & values$Previous_Reference!='' ){
@@ -370,14 +366,14 @@ server <- function(input, output, session) {
     
     ##TODO HERE
     shiny::updateCheckboxGroupInput( session, inputId = "n_runs", choices = n_runs_index, selected = seq(1, length((values$chromnames))), inline = TRUE  )
-    
-  })
+    }) # End withConsoleRedirect
+  }) # End observer
   
   # Peptide Selection Event -------------------------------------------------
   
   ## Observe Peptide Selection
   observeEvent( input$Mod, {
-    
+    withConsoleRedirect("console", {
     tryCatch(
       expr = {
         
@@ -409,7 +405,8 @@ server <- function(input, output, session) {
         message(sprintf("[Updating Charge Drop Down List] There was the following error that occured during Charge Drop Down List: %s\n", e$message))
       }
     ) # End tryCatch
-  } )
+  }) # End withConsoleRedirect
+  }) # End observer
   
   
   # Plot Settings Tab Events ------------------------------------------------
@@ -417,7 +414,7 @@ server <- function(input, output, session) {
   ## transition_selection_list
   observeEvent( {input$yIdent
     input$bIdent }, {
-      
+      withConsoleRedirect("console", {
       tryCatch(
         expr = {
           
@@ -437,13 +434,15 @@ server <- function(input, output, session) {
           message(sprintf("[Observe Identifying ions selection] There was the following error that occured during Identifying Ions Input Observation: %s\n", e$message))
         }
       ) # End tryCatch
-    })
+    }) # End withConsoleRedirect
+    })# End observer
   
   
   # Plot Control Events -----------------------------------------------------
   
   
   observeEvent(input$n_runs,{
+    withConsoleRedirect("console", {
     #Generate set of variable plots
     output$plots <- renderUI({
       
@@ -483,8 +482,8 @@ server <- function(input, output, session) {
       do.call(tagList, path_plot_output_list)
       
     })
-    
-  })
+    }) # End withConsoleRedirect
+  }) # End observer
   
   
   # When a double-click happens, check if there's a brush on the plot.
@@ -513,6 +512,7 @@ server <- function(input, output, session) {
   # oswTable Output ---------------------------------------------------------
   
   observeEvent(input$n_runs,{
+    withConsoleRedirect("console", {
     #Generate set of variable oswtables
     output$oswtables <- renderUI({
       
@@ -528,7 +528,8 @@ server <- function(input, output, session) {
       do.call(tagList, datatable_output_list)
       
     })
-  })
+  }) # End withConsoleRedirect
+  }) # End observer
   
   # Main Observation Event --------------------------------------------------
   
