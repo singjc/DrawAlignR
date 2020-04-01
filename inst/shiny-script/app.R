@@ -114,7 +114,7 @@ ui <- fluidPage(
 # lapply(list.files("./R/", full.names = T), function( source_file ) { message(sprintf("Loading Source File: %s\n", source_file)); source(source_file, local = TRUE) } )
 # unzoom_double_click <<- NULLi
 server <- function(input, output, session) {
-
+ 
   # Server Help Annotations -------------------------------------------------
   
     server_help_description_text(input, output, session)
@@ -685,7 +685,7 @@ server <- function(input, output, session) {
                                  dplyr::filter( FullPeptideName==input$Mod & Charge==input$Charge ) %>%
                                  dplyr::mutate( filename = basename(filename) ) %>%
                                  dplyr::filter( filename== basename(ms_file_runname) ) %>%
-                                 dplyr::select( "filename", "Charge", "mz", "Intensity", "RT", "assay_rt", "leftWidth", "rightWidth", "ms2_pep", "peak_group_rank", "d_score", dplyr::contains("ms2_m_score"), "m_score", dplyr::contains("original_assay") ) 
+                                 dplyr::select( "filename", "Charge", "mz", "Intensity", "RT", "assay_rt", "leftWidth", "rightWidth", dplyr::contains("ms2_pep"), dplyr::contains("peak_group_rank"), dplyr::contains("d_score"), dplyr::contains("ms2_m_score"), dplyr::contains("m_score"), dplyr::contains("original_assay") ) 
                              )
                              
                            }) # End Local

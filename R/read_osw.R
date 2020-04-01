@@ -55,7 +55,7 @@ fetchAnalytesInfo <- function(oswName, maxFdrQuery, oswMerged,
   # Check for presence of required SCORE_MS2 table
   check_sqlite_table( conn=con, table="SCORE_MS2", msg="[DrawAlignR::fetchAnalytesInfo:::check_sqlite_table]")
   # If analysing IPF results, check for SCORE_IPF table
-  if ( runType=="DIA_Proteomics_ipf" ) check_sqlite_table( conn=con, table="SCORE_IPF", msg="[DrawAlignR::fetchAnalytesInfo:::check_sqlite_table]")
+  if ( runType=="DIA_Proteomics_ipf" ) check_sqlite_table( conn=con, table="SCORE_IPF", msg="[DrawAlignR::fetchAnalytesInfo:::check_sqlite_table] Check if runType corresponds with your type of experiment.\nYou select runType: 'DIA_Proteomics_ipf'\n")
   # IF using ipf and analytes is supplied, need to use codename standard.. 
   # TODO: Make this more robust
   if ( runType=="DIA_Proteomics_ipf" & !is.null(analytes) ) analytes <- mstools::unimodTocodename(analytes)

@@ -246,7 +246,7 @@ getListObj <- function(x, name) {
 #' @export
 check_sqlite_table <- function( conn, table, msg="" ) {
   if( !DBI::dbExistsTable( conn, table ) ){
-    out.msg <- sprintf("%s An Error occured! There was no %s Table found in %s\n", msg, table, conn@dbname)
+    out.msg <- sprintf("%s An Error occured! There was no %s Table found in %s.\nCheck to see if you are using the right file, or if the file is corrupted.\n", msg, table, conn@dbname)
     stop( out.msg, call.=FALSE )
   }  
 }

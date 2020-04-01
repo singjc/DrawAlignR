@@ -189,7 +189,7 @@ AlignmentSettingsTab <- shiny::tabPanel( title = "Alignment Settings",
                                          
                                          ## simMeasure
                                          shiny::splitLayout(cellWidths = c("80%", "20%"),
-                                                            shiny::selectizeInput('runType', 'Experiment Type', selected = 'DIA_Proteomics_ipf', choices = c('DIA_Proteomics', 'DIA_Proteomics_ipf', 'MRM_Proteomics', 'DIA_Metabolomics'), 
+                                                            shiny::selectizeInput('runType', 'Experiment Type', selected = 'DIA_Proteomics', choices = c('DIA_Proteomics', 'DIA_Proteomics_ipf', 'MRM_Proteomics', 'DIA_Metabolomics'), 
                                                                                   options = list(
                                                                                     valueField = 'runType',
                                                                                     labelField = 'name',
@@ -483,12 +483,6 @@ PlottingSettingsTab <- shiny::tabPanel( title = "Plot Settings",
                                         
                                         ##### Plotly Options
                                         
-                                        h4('Experimental/Developmental Settings'),
-                                        
-                                        'The settings below are still under active development. They may not react as expected.',
-                                        
-                                        br(),
-                                        
                                         ## Display Bar
                                         shiny::splitLayout(cellWidths = c("80%", "20%"),
                                                            shinyWidgets::switchInput(inputId = 'plotly.displayModeBar', label = 'Menu Bar', value = TRUE),
@@ -497,17 +491,22 @@ PlottingSettingsTab <- shiny::tabPanel( title = "Plot Settings",
                                         shiny::tags$style(type='text/css', "#plotly.displayModeBar { width:100%; margin-top: 0px;}"),
                                         shiny::tags$style(type='text/css', "#plotly_displayModeBar_help { width:100%; margin-top: 0px;}"), 
                                         
+                                        h4('Experimental Settings'),
+                                        
+                                        'The setting below are under development. They are currently disabled.',
+                                        
+                                        br(),
                                         
                                         ## Enanle Linked Zooming
                                         shiny::splitLayout(cellWidths = c("80%", "20%"),
-                                                           shinyWidgets::switchInput(inputId = 'plotly.linkedzooming.x', label = 'Link Zoom X', value = FALSE),
+                                                           shinyWidgets::switchInput(inputId = 'plotly.linkedzooming.x', label = 'Link Zoom X', value = FALSE, disabled = TRUE),
                                                            bsButton("plotly_linkedzooming_x_help", label = "?", size = "small")
                                         ),
                                         shiny::tags$style(type='text/css', "#plotly.linkedzooming.x { width:100%; margin-top: 0px;}"),
                                         shiny::tags$style(type='text/css', "#plotly_linkedzooming_x_help { width:100%; margin-top: 0px;}"), 
                                         
                                         shiny::splitLayout(cellWidths = c("80%", "20%"),
-                                                           shinyWidgets::switchInput(inputId = 'plotly.linkedzooming.y', label = 'Link Zoom Y', value = FALSE),
+                                                           shinyWidgets::switchInput(inputId = 'plotly.linkedzooming.y', label = 'Link Zoom Y', value = FALSE, disabled = TRUE),
                                                            bsButton("plotly_linkedzooming_y_help", label = "?", size = "small")
                                         ),
                                         shiny::tags$style(type='text/css', "#plotly.linkedzooming.y { width:100%; margin-top: 0px;}"),
