@@ -43,7 +43,7 @@ for ( i in seq(1,length(input$n_runs)) ) {
     output[[path_plotname]] <- renderPlotly({
       # output$log <- renderText( paste(log, collapse = '\n') )
       
-        values$alignmentPathPlot[[plotname]] %>% 
+        values$alignmentPathPlot[[path_plotname]] %>% 
           plotly::config( displayModeBar = input$plotly.displayModeBar )
       
     }) # End renderPlotly

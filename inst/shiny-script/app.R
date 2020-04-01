@@ -317,8 +317,8 @@ server <- function(input, output, session) {
     values$Reference <- input$Reference
     if ( values$Reference!=values$Previous_Reference & values$Previous_Reference!='' ){
       message(sprintf("Previous Reference: %s --> New Reference: %s\n", values$Previous_Reference, values$Reference ))
-      values$reference_plotted <- FALSE
-      ref_plotname <- paste("plot_run_", values$run_index_map[[ values$Previous_Reference ]], sep="")
+      # values$reference_plotted <- FALSE
+      # ref_plotname <- paste("plot_run_", values$run_index_map[[ values$Previous_Reference ]], sep="")
       # clearPlots( input, output, global, values, session )
     }
     values$Previous_Reference <- input$Reference
@@ -728,7 +728,7 @@ server <- function(input, output, session) {
         ##    Alignment Plotting Events
         ##***********************************************
         ## Clear Plots
-        clearPlots( input, output, global, values, session )
+        # clearPlots( input, output, global, values, session )
         ## Cache Algined Plots
         cacheAlignmentPlots( input, output, global, values, session ) 
         ## Draw Aligned Results

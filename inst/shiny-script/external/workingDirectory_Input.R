@@ -90,7 +90,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                   ## Get list of unique modified peptides
                   uni_peptide_list <- as.list(unique( osw_df$FullPeptideName ) )
                   ## Update selection list with unique peptides
-                  updateSelectizeInput( session, inputId = 'Mod', choices = uni_peptide_list  )
+                  updateSelectizeInput( session, inputId = 'Mod', choices = uni_peptide_list, selected = uni_peptide_list[1]  )
                 }
               } else {
                 warning( sprintf("There was no osw file found in osw directory:\n%s\n", target_subdir) )
@@ -127,7 +127,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                 ## Get list of unique modified peptides
                 uni_peptide_list <- as.list(unique( lib_df$MODIFIED_SEQUENCE )) 
                 ## Update slection list with unique peptides
-                updateSelectizeInput( session, inputId = 'Mod', choices = uni_peptide_list  )
+                updateSelectizeInput( session, inputId = 'Mod', choices = uni_peptide_list, selected = uni_peptide_list[1]  )
               } else {
                 warning( sprintf("There was no pqp file found in pqp directory:\n%s\n", target_subdir) )
               }

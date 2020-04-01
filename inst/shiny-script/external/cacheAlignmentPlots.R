@@ -12,6 +12,7 @@ cacheAlignmentPlots <- function( input, output, global, values, session ){
       # Get run Indec
       run_index <- values$run_index_map[[ current_experiment ]]
       plotname <- paste("plot_run_", run_index, sep="")
+      path_plotname <- paste("pathplot_run_", run_index, sep="")
       cat(sprintf("Current Exp: %s of %s with run_idx and plotname %s : %s\n", current_experiment, length(input$Experiment), run_index, plotname ))
       
       tryCatch(
@@ -30,8 +31,8 @@ cacheAlignmentPlots <- function( input, output, global, values, session ){
               event_register(event="plotly_relayout")
             values$alignedChromsPlot[[plotname]] <- pt3
             ## Check and add Reference plot if not added yet
-            message(sprintf("HERE REFERENCE PLOTTED?: %s\n", values$reference_plotted))
-            if ( values$reference_plotted == FALSE ){
+            # message(sprintf("HERE REFERENCE PLOTTED?: %s\n", values$reference_plotted))
+            # if ( values$reference_plotted == FALSE ){
               ref_plotname <- paste("plot_run_", values$run_index_map[[ values$Reference ]], sep="")
               cat(sprintf("Storing Reference plot taken from Current Exp: %s of %s with run_idx and plotname %s : %s\n", current_experiment, length(values$Experiment), run_index, plotname ))
               pt1 <- plotly::ggplotly( (alignedChromsPlot$prefU), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
@@ -43,14 +44,18 @@ cacheAlignmentPlots <- function( input, output, global, values, session ){
                 event_register(event="plotly_relayout")
               
               values$alignedChromsPlot[[ref_plotname]] <- pt1
-              values$reference_plotted <- TRUE
-            }
+              # values$reference_plotted <- TRUE
+            # }
             ## Get Alignment Path Plot
             alignmentPathPlot <- plotAlignmentPath( AlignObjOutput = values$AlignObj_List[[current_experiment]], title = sprintf("%s Aligned to %s", current_experiment, values$Reference) )
             suppressWarnings(
               pt3 <- plotly::ggplotly( (alignmentPathPlot), tooltip = c("all"), dynamicTicks = T)
             )
-            values$alignmentPathPlot[[plotname]] <- pt3
+            values$alignmentPathPlot[[path_plotname]] <- pt3
+            if ( values$Previous_Reference!='' & values$Reference!=values$Previous_Reference ){
+              ref_path_plotname <- paste("plot_run_", values$run_index_map[[ values$Previous_Reference ]], sep="")
+              values$alignmentPathPlot[[ref_path_plotname]] <- plotly::ggplotly(ggplot())
+            }
           } else {
             text <- sprintf("There was an issue while performing alignment.\nYou most likely need to adjust one of the alignment settings.\n The following error occured: %s",  values$AlignObj_List[[current_experiment]])
             
@@ -75,7 +80,7 @@ cacheAlignmentPlots <- function( input, output, global, values, session ){
                                                                                    axis.text = element_bilank()
                                                                             ) )
             
-            values$alignmentPathPlot[[plotname]] <- plotly::ggplotly( ggplot() +
+            values$alignmentPathPlot[[path_plotname]] <- plotly::ggplotly( ggplot() +
                                                                         annotate( "text", x = 4, y = 25, size = 8, label = text ) +
                                                                         ggtitle( sprintf("Run: %s", current_experiment) ) +
                                                                         theme_bw() + 
