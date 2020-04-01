@@ -17,17 +17,21 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
             roots <- c(roots, values$drives()) 
             ## Get working directory contain data files
             shinyDirChoose(input=input, id='interactiveWorkingDirectory', roots = roots, defaultRoot = 'root', defaultPath = .Platform$file.sep, session=session  )
+            ## Resetting Textbox input for working directory if interactive working directory button is selected.
+            if( is.numeric(input$interactiveWorkingDirectory) ){
+              message("[DrawAlignR::WorkingDirectoryInput] Working Directory button pressed. Resetting textbox\n")
+              reset("WorkingDirectory")
+            }
             if ( input$WorkingDirectory!="" ) {
-              print("Using test working directory input")
+              # print("Using test working directory input")
               global$datapath <- normalizePath( input$WorkingDirectory )
               ## Get mapping of runs to filename
               values$runs_filename_mapping <- getRunNames(global$datapath, oswMerged = TRUE, chrom_ext = ".chrom.mzML|.chrom.sqMass")
               ## Search working directory for osw file, mzml files, pqpfiles
               subDirs <- normalizePath( list.dirs( path = global$datapath, full.names = T, recursive = F ) )
             } else {
-              print("Using interactive button working directory input")
+              # print("Using interactive button working directory input")
               ### Create a reactive object to store working directory
-              # dir <- reactive( req(is.list(input$interactiveWorkingDirectory)) )
               dir <- reactive( input$interactiveWorkingDirectory )
               values$WorkingDirectory <- renderText({  
                 global$datapath
@@ -38,12 +42,14 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                 root_node <- roots[ which( names(roots) %in% dir()$root ) ]
                 ## Get full working directroy of user selected directory
                 global$datapath <- normalizePath( paste( normalizePath(root_node), file.path( paste( unlist(dir()$path[-1]), collapse = .Platform$file.sep ) ), sep = .Platform$file.sep ) )
-                
+                if ( global$datapath!=global$previous_datapath & global$previous_datapath!='' ){
+                  message(sprintf("Previous working directory: %s --> New working directory: %s\n", global$previous_datapath, global$datapath ))
+                }
+                global$previous_datapath <- global$datapath
                 ## Get mapping of runs to filename
                 values$runs_filename_mapping <- getRunNames(global$datapath, oswMerged = TRUE, chrom_ext = ".chrom.mzML|.chrom.sqMass")
                 ## Update global most recent directroy
                 global$mostRecentDir <- global$datapath
-                
                 ## Update Working Directory Text Box
                 updateTextInput( session = session, inputId = 'WorkingDirectory', value = global$datapath  )
               }
@@ -53,7 +59,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
             subDirs <- normalizePath( list.dirs( path = global$datapath, full.names = T, recursive = F ) )
           },
           error = function(e){
-            message(sprintf("[WorkingDirectoryInput] There was the following error that occured during Working Directory Button observation: %s\n", e$message))
+            message(sprintf("[DrawAlignR::WorkingDirectoryInput] There was the following error that occured while obtaining working directory: %s\n", e$message))
           }
         ) # End tryCatch
         ## Search working directory for osw file, mzml files, pqpfiles
@@ -91,7 +97,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                   uni_peptide_list <- as.list(unique( osw_df$FullPeptideName ) )
                   ## Update selection list with unique peptides
                   updateSelectizeInput( session, inputId = 'Mod', choices = uni_peptide_list, selected = uni_peptide_list[1]  )
-                  input$Mod <- uni_peptide_list[1]
+                  # input$Mod <- uni_peptide_list[1]
                 }
               } else {
                 warning( sprintf("There was no osw file found in osw directory:\n%s\n", target_subdir) )
@@ -129,7 +135,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                 uni_peptide_list <- as.list(unique( lib_df$MODIFIED_SEQUENCE )) 
                 ## Update slection list with unique peptides
                 updateSelectizeInput( session, inputId = 'Mod', choices = uni_peptide_list, selected = uni_peptide_list[1]  )
-                input$Mod <- uni_peptide_list[1]
+                # input$Mod <- uni_peptide_list[1]
               } else {
                 warning( sprintf("There was no pqp file found in pqp directory:\n%s\n", target_subdir) )
               }

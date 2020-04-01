@@ -70,7 +70,7 @@ pickNearestFeature <- function(eXpRT, analyte, oswFiles, runname, adaptiveRT, fe
 #' @importFrom zoo na.locf
 #' @export
 mapIdxToTime <- function(timeVec, idx){
-  mutateT <- na.locf(na.locf(timeVec[idx], na.rm = FALSE), fromLast = TRUE)
+  mutateT <- zoo::na.locf(zoo::na.locf(timeVec[idx], na.rm = FALSE), fromLast = TRUE)
   return(mutateT)
 }
 

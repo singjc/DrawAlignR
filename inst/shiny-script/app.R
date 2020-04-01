@@ -114,50 +114,55 @@ ui <- fluidPage(
 # lapply(list.files("./R/", full.names = T), function( source_file ) { message(sprintf("Loading Source File: %s\n", source_file)); source(source_file, local = TRUE) } )
 # unzoom_double_click <<- NULLi
 server <- function(input, output, session) {
+
+  # Server Help Annotations -------------------------------------------------
   
-  server_help_description_text(input, output, session)
-  
-  ## reactive values object to store some re-usable stuff
-  values <- reactiveValues(
-    Reference = '',
-    Previous_Reference = '',
-    Experiments_to_Align = '',
-    transition_selection_list = list(),
-    lib_df = NULL,
-    reference_plotted = FALSE,
-    drives = shinyFiles::getVolumes(),
-    plots = list(),
-    alignedChromsPlot = list(),
-    alignmentPathPlot = list(),
-    mzPntrs = NULL,
-    start_plotting = FALSE
-  )
-  global <- reactiveValues(
-    datapath = '', 
-    chromFile = '', 
-    libFile = '', 
-    oswFile = '', 
-    mostRecentDir = getwd(), 
-    foundChromFiles = list(mzml=list(), sqmass=list()), 
-    chromTypes_available = "",
-    plotly.autorange.x = T,
-    plotly.autorange.y = T,
-    link_zoom_range_current = list(),
-    unzoom_double_click = NULL
-  )
-  output$chromTypes_available <- renderText({ '' })
-  # link_zoom_ranges  <- reactiveValues(x = NULL, y = NULL)
-  brush <- NULL
-  makeReactiveBinding("brush")
-  n_runs_index <- NULL
-  out.plot.h <- NULL
-  mzPntrs <- NULL
-  # link_zoom_ranges <- reactiveValues(`xaxis.range[0]`=NULL, `xaxis.range[1]`=NULL, `yaxis.range[0]`=NULL, `yaxis.range[1]`=NULL)
-  # link_zoom_range_current <- reactiveValues(`xaxis.range[0]`=NULL, `xaxis.range[1]`=NULL, `yaxis.range[0]`=NULL, `yaxis.range[1]`=NULL)
-  # link_zoom_range_current <- reactiveValues()
-  # link_zoom_ranges <- list(`xaxis.range[0]`=1650, `xaxis.range[1]`=1900, `yaxis.range[0]`=0, `yaxis.range[1]`=15000)
+    server_help_description_text(input, output, session)
   
   
+  # Server Reactive Values --------------------------------------------------
+  
+    ## reactive values object to store some re-usable stuff
+    values <- reactiveValues(
+      Reference = '',
+      Previous_Reference = '',
+      Experiments_to_Align = '',
+      transition_selection_list = list(),
+      lib_df = NULL,
+      reference_plotted = FALSE,
+      drives = shinyFiles::getVolumes(),
+      plots = list(),
+      alignedChromsPlot = list(),
+      alignmentPathPlot = list(),
+      mzPntrs = NULL,
+      start_plotting = FALSE
+    )
+    global <- reactiveValues(
+      datapath = '', 
+      previous_datapath = '',
+      chromFile = '', 
+      libFile = '', 
+      oswFile = '', 
+      mostRecentDir = getwd(), 
+      foundChromFiles = list(mzml=list(), sqmass=list()), 
+      chromTypes_available = "",
+      plotly.autorange.x = T,
+      plotly.autorange.y = T,
+      link_zoom_range_current = list(),
+      unzoom_double_click = NULL
+    )
+    output$chromTypes_available <- renderText({ '' })
+    # link_zoom_ranges  <- reactiveValues(x = NULL, y = NULL)
+    brush <- NULL
+    makeReactiveBinding("brush")
+    n_runs_index <- NULL
+    out.plot.h <- NULL
+    # link_zoom_ranges <- reactiveValues(`xaxis.range[0]`=NULL, `xaxis.range[1]`=NULL, `yaxis.range[0]`=NULL, `yaxis.range[1]`=NULL)
+    # link_zoom_range_current <- reactiveValues(`xaxis.range[0]`=NULL, `xaxis.range[1]`=NULL, `yaxis.range[0]`=NULL, `yaxis.range[1]`=NULL)
+    # link_zoom_range_current <- reactiveValues()
+    # link_zoom_ranges <- list(`xaxis.range[0]`=1650, `xaxis.range[1]`=1900, `yaxis.range[0]`=0, `yaxis.range[1]`=15000)
+    
+    
   # Show/Hide Output Tabs ---------------------------------------------------
   observe( {
     if (input$Align==TRUE){
@@ -218,7 +223,10 @@ server <- function(input, output, session) {
   # Chromatogram File Cacheing Events ---------------------------------------
   
   ## If multiple chromatogram format types are found, check to see which fortmat user wants to use  
-  observeEvent( input$chromType_Choice, {
+  observeEvent( {
+    input$chromType_Choice
+    global$datapath
+    } , {
     if ( input$chromType_Choice!='' ){
       message( sprintf("Using chromtype: %s", input$chromType_Choice) )
       tryCatch(
@@ -246,7 +254,7 @@ server <- function(input, output, session) {
                 run_with_most_features <- values$chromnames[1]
               }
               ## Update Reference list
-              updateSelectizeInput( session, inputId = "Reference", choices = as.list(run_with_most_features) )
+              updateSelectizeInput( session, inputId = "Reference", choices = as.list(values$chromnames), selected = as.list(run_with_most_features) )
               ## Update Experiment list with first entry removed
               updateSelectizeInput( session, inputId = "Experiment", choices = as.list(values$chromnames[-(match(run_with_most_features, values$chromname))]), selected = as.list(values$chromnames[-(match(run_with_most_features, values$chromname))]) )
               ## Update n chroms input
@@ -757,7 +765,7 @@ server <- function(input, output, session) {
         ##    Alignment Plotting Events
         ##***********************************************
         ## Clear Plots
-        # clearPlots( input, output, global, values, session )
+        clearPlots( input, output, global, values, session )
         ## Cache Algined Plots
         cacheAlignmentPlots( input, output, global, values, session ) 
         ## Draw Aligned Results
