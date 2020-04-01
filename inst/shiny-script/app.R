@@ -441,16 +441,6 @@ server <- function(input, output, session) {
         
         path_plotname <- paste("pathplot_run_", run_index, sep="")
         message(sprintf("Creating Path Plot: %s\n", path_plotname))
-        # plotOutput(plotname,
-        #            dblclick = "link_zoom_dblclick",
-        #            brush = brushOpts(
-        #              id = "link_zoom_brush",
-        #              resetOnNew = TRUE
-        #            ),
-        #            hover = hoverOpts(
-        #              id = paste0(plotname, "_hover")
-        #            )
-        # ) # End of plotlyOutput
         plotlyOutput(path_plotname)
         
       })
@@ -510,7 +500,6 @@ server <- function(input, output, session) {
     {
       input$Mod
       input$Align 
-      input$Reference
       input$refreshAlign
       values$start_plotting
     }, {
@@ -590,7 +579,7 @@ server <- function(input, output, session) {
                                  
                                  ## Old method using plotly
                                  plotly::ggplotly( p = (out.plot.h), source = plotname, tooltip = c("x", "y", "text"), dynamicTicks = T ) %>%
-                                   plotly::layout(title = list( text = unique(paste0(out.plot.h$labels$title,
+                                   plotly::layout(title = list( text = unique(paste0( out.plot.h$labels$title,
                                                                                      '<br>',
                                                                                      '<sup>',
                                                                                      gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', out.plot.h$labels$subtitle)),

@@ -86,7 +86,7 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
   ###################### Plot unaligned chromatogram ######################################
   
   ## Get transition information from the osw file
-  transition_table <- mstools::getPepLibData_( global$oswFile[[1]], mod_peptide_id = c(input$Mod, mstools::unimodTocodename(input$Mod)) )
+  transition_table <- mstools::getPepLibData_( global$oswFile[[1]], peptide_id = gsub("\\([a-zA-Z0-9:.]+\\)", '', input$Mod) )
   values$transition_table <- transition_table
   
   ##**************************
@@ -107,11 +107,11 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
     }
   }
   g <- ggplot2::ggplot()
-  tictoc::tic("Plotting Ref")
   g <- mstools::getXIC( graphic_obj = g, 
                         df_lib = transition_table, 
                         mod = input$Mod, 
                         Isoform_Target_Charge = input$Charge,
+                        SCORE_IPF = Score_IPF_Present(global$oswFile[[1]]),
                         chromatogram_file = global$chromFile[ grepl(refRun, names(global$chromFile)) ][[1]], 
                         chromatogram_data_points_list=XICs.ref.rename,
                         transition_type = 'detecting', 
@@ -137,6 +137,7 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
                         transition_type='none', 
                         max_Int = max_Int, 
                         in_osw = global$oswFile[[1]], 
+                        SCORE_IPF = Score_IPF_Present( global$oswFile[[1]] ),
                         doFacetZoom=F, 
                         top_trans_mod_list=NULL, 
                         RT_pkgrps=NULL, 
@@ -146,72 +147,73 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
                         show_legend = T  )
   max_Int <- g$max_Int
   g <- g$graphic_obj
-  tictoc::toc()
   prefU <- g + ggplot2::xlab("Reference RT")
   
-  ##**************************
-  ## Experiment Chromatogram 
-  ##**************************
-  
-  message("Plotting Experiment Chromatogram")
-  
-  XICs.eXp.rename <- XICs.eXp
-  
-  ## Rename list using transition ids
-  names(XICs.eXp.rename) <- unlist(lapply(XICs.eXp.rename, function(x){ gsub("^X*", "", names(x)[2]) }))
-  
-  for (i in seq(1:length(XICs.eXp.rename))){
-    names(XICs.eXp.rename[[i]]) <- c('RT','Int')
-    if ( length(smooth_chromatogram)>0 ){
-      XICs.eXp.rename[[i]]$Int <- signal::sgolayfilt( XICs.eXp.rename[[i]]$Int, p = smooth_chromatogram$p, n = smooth_chromatogram$n )
-    }
-  }
-  
-  g <- ggplot2::ggplot()
-  invisible( capture.output(suppressWarnings(
-  g <- mstools::getXIC( graphic_obj = g, 
-                        df_lib = transition_table, 
-                        mod = input$Mod, 
-                        Isoform_Target_Charge = input$Charge,
-                        chromatogram_file = global$chromFile[ grepl(eXpRun, names(global$chromFile)) ][[1]], 
-                        chromatogram_data_points_list=XICs.eXp.rename,
-                        transition_type = 'detecting', 
-                        uni_mod_list = NULL, 
-                        max_Int = NULL, 
-                        in_osw=NULL, 
-                        smooth_chromatogram=NULL, 
-                        doFacetZoom=F, 
-                        top_trans_mod_list=NULL, 
-                        show_n_transitions=input$nIdentifyingTransitions,
-                        transition_dt=NULL )
-  )))
-  max_Int <- g$max_Int
-  g <- g$graphic_obj
-  
-  ###################################
-  ##     ADD OSW RESULTS INFO     ###
-  ###################################
-  invisible( capture.output(suppressWarnings(
-  g <- mstools::getXIC( graphic_obj = g, 
-                        df_lib = transition_table, 
-                        mod = input$Mod, 
-                        Isoform_Target_Charge = input$Charge,
-                        chromatogram_file = global$chromFile[ grepl(eXpRun, names(global$chromFile)) ][[1]], 
-                        transition_type='none', 
-                        max_Int = max_Int, 
-                        in_osw = global$oswFile[[1]], 
-                        doFacetZoom=F, 
-                        top_trans_mod_list=NULL, 
-                        RT_pkgrps=NULL, 
-                        show_manual_annotation=NULL, 
-                        show_peak_info_tbl=F,
-                        FacetFcnCall=NULL, 
-                        show_legend = T  )
-  )))
-  max_Int <- g$max_Int
-  g <- g$graphic_obj
-  
-  peXpU <- g + ggplot2::xlab("Experiment RT")
+  # ##**************************
+  # ## Experiment Chromatogram 
+  # ##**************************
+  # 
+  # message("Plotting Experiment Chromatogram")
+  # 
+  # XICs.eXp.rename <- XICs.eXp
+  # 
+  # ## Rename list using transition ids
+  # names(XICs.eXp.rename) <- unlist(lapply(XICs.eXp.rename, function(x){ gsub("^X*", "", names(x)[2]) }))
+  # 
+  # for (i in seq(1:length(XICs.eXp.rename))){
+  #   names(XICs.eXp.rename[[i]]) <- c('RT','Int')
+  #   if ( length(smooth_chromatogram)>0 ){
+  #     XICs.eXp.rename[[i]]$Int <- signal::sgolayfilt( XICs.eXp.rename[[i]]$Int, p = smooth_chromatogram$p, n = smooth_chromatogram$n )
+  #   }
+  # }
+  # 
+  # g <- ggplot2::ggplot()
+  # invisible( capture.output(suppressWarnings(
+  # g <- mstools::getXIC( graphic_obj = g, 
+  #                       df_lib = transition_table, 
+  #                       mod = input$Mod, 
+  #                       Isoform_Target_Charge = input$Charge,
+  #                       SCORE_IPF = Score_IPF_Present( global$oswFile[[1]] ),
+  #                       chromatogram_file = global$chromFile[ grepl(eXpRun, names(global$chromFile)) ][[1]], 
+  #                       chromatogram_data_points_list=XICs.eXp.rename,
+  #                       transition_type = 'detecting', 
+  #                       uni_mod_list = NULL, 
+  #                       max_Int = NULL, 
+  #                       in_osw=NULL, 
+  #                       smooth_chromatogram=NULL, 
+  #                       doFacetZoom=F, 
+  #                       top_trans_mod_list=NULL, 
+  #                       show_n_transitions=input$nIdentifyingTransitions,
+  #                       transition_dt=NULL )
+  # )))
+  # max_Int <- g$max_Int
+  # g <- g$graphic_obj
+  # 
+  # ###################################
+  # ##     ADD OSW RESULTS INFO     ###
+  # ###################################
+  # invisible( capture.output(suppressWarnings(
+  # g <- mstools::getXIC( graphic_obj = g, 
+  #                       df_lib = transition_table, 
+  #                       mod = input$Mod, 
+  #                       Isoform_Target_Charge = input$Charge,
+  #                       chromatogram_file = global$chromFile[ grepl(eXpRun, names(global$chromFile)) ][[1]], 
+  #                       transition_type='none', 
+  #                       max_Int = max_Int, 
+  #                       in_osw = global$oswFile[[1]], 
+  #                       SCORE_IPF = Score_IPF_Present( global$oswFile[[1]] ),
+  #                       doFacetZoom=F, 
+  #                       top_trans_mod_list=NULL, 
+  #                       RT_pkgrps=NULL, 
+  #                       show_manual_annotation=NULL, 
+  #                       show_peak_info_tbl=F,
+  #                       FacetFcnCall=NULL, 
+  #                       show_legend = T  )
+  # )))
+  # max_Int <- g$max_Int
+  # g <- g$graphic_obj
+  # 
+  # peXpU <- g + ggplot2::xlab("Experiment RT")
   
   ###################### Plot aligned chromatogram ######################################
   
@@ -239,10 +241,11 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
   
   g <- ggplot2::ggplot()
   invisible( capture.output(suppressWarnings(
-  g <- mstools::getXIC( graphic_obj = g, 
+  g <-  mstools::getXIC( graphic_obj = g, 
                         df_lib = transition_table, 
                         mod = input$Mod, 
                         Isoform_Target_Charge = input$Charge,
+                        SCORE_IPF = Score_IPF_Present( global$oswFile[[1]] ),
                         chromatogram_file = global$chromFile[ grepl(eXpRun, names(global$chromFile)) ][[1]], 
                         chromatogram_data_points_list=XICs.eXp.aligned,
                         transition_type = 'detecting', 
@@ -262,7 +265,7 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
   ##     ADD OSW RESULTS INFO     ###
   ###################################
   invisible( capture.output(suppressWarnings(
-  g <- mstools::getXIC( graphic_obj = g, 
+  g <-  mstools::getXIC( graphic_obj = g, 
                         df_lib = transition_table, 
                         mod = input$Mod, 
                         Isoform_Target_Charge = input$Charge,
@@ -270,6 +273,7 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
                         transition_type='none', 
                         max_Int = max_Int, 
                         in_osw = global$oswFile[[1]], 
+                        SCORE_IPF = Score_IPF_Present( global$oswFile[[1]] ),
                         annotate_best_pkgrp=F,
                         doFacetZoom=F, 
                         top_trans_mod_list=NULL, 
@@ -392,8 +396,8 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
     refCorresponding_rt_osw <- osw_dt_ref[ which.min(abs(osw_dt_ref$RT - refCorresponding_rt)), ]
     
     
-    XICs.eXp[[1]][['time']][ AlignedIndices[, 'indexAligned.eXp'] ]
-    XICs.ref[[1]][["time"]][ AlignedIndices[, 'indexAligned.ref'] ]
+    # XICs.eXp[[1]][['time']][ AlignedIndices[, 'indexAligned.eXp'] ]
+    # XICs.ref[[1]][["time"]][ AlignedIndices[, 'indexAligned.ref'] ]
     if ( dim(refCorresponding_rt_osw)[1]>0 ){
     peXpA <- peXpA +
       geom_rect(data = data.frame(xmin = refCorresponding_rt_osw$leftWidth,
@@ -408,7 +412,7 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
   }
   
   ###################### return ggplot objects ######################################
-  figs <- list("prefU" = prefU,"peXpU" = peXpU, "peXpA" = peXpA)
+  figs <- list("prefU" = prefU, "peXpA" = peXpA)
   figs
 }
 

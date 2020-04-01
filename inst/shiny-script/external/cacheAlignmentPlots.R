@@ -1,6 +1,6 @@
 cacheAlignmentPlots <- function( input, output, global, values, session ){
   MazamaCoreUtils::logger.setLevel("FATAL")
-  observeEvent(input$Reference, {
+  # observeEvent(input$Reference, {
     withProgress(message = sprintf('Generating and Cacheing Plots for %s runs...', length(input$Experiment)),
                  detail = 'Generating aligned chromatogram plots, and alignment path plots...', value = 0, expr = {
                    for ( i in input$Experiment ) {
@@ -18,12 +18,15 @@ cacheAlignmentPlots <- function( input, output, global, values, session ){
                        plotname <- paste("plot_run_", run_index, sep="")
                        # Get plot tag for alignment path plot
                        path_plotname <- paste("pathplot_run_", run_index, sep="")
-                       message( sprintf("Current Exp: %s of %s with run_idx %s and plot tag %s\n", current_experiment, length(input$Experiment), run_index, plotname ) )
+                       message( sprintf("Current Exp: %s of %s with run_idx %s and chrom plot tag %s and alignment path plot tag %s\n", current_experiment, length(input$Experiment), run_index, plotname, path_plotname ) )
                        
                        tryCatch(
                          expr = { 
+                           message( sprintf( "Class of AlignObj for run %s is %s with length %s\n", current_experiment, class(values$AlignObj_List[[current_experiment]]), length(values$AlignObj_List[[current_experiment]]) ))
+                           print( names(values$AlignObj_List[[current_experiment]]) )
                            ## Generate Plot
-                           if ( class(values$AlignObj_List[[current_experiment]])!= "character" ){
+                           if ( class(values$AlignObj_List[[current_experiment]])!= "character" & length(values$AlignObj_List[[current_experiment]]) > 0 ){
+                             message(sprintf("Generating Aligned Chromatogram from Current Exp: %s of %s with run_idx %s and plotname  %s\n", current_experiment, length(input$Experiment), run_index, plotname ))
                              ## Get Alignment Plots
                              alignedChromsPlot <- plotAlignedAnalytes(AlignObjOutput = values$AlignObj_List[[current_experiment]], DrawAlignR = T, annotatePeak = T, annotateOrgPeak = input$OriginalRTAnnotation, global = global, input = input)
                              ## Store Aligned Experiment Plot
@@ -41,7 +44,7 @@ cacheAlignmentPlots <- function( input, output, global, values, session ){
                              # message(sprintf("HERE REFERENCE PLOTTED?: %s\n", values$reference_plotted))
                              # if ( values$reference_plotted == FALSE ){
                              ref_plotname <- paste("plot_run_", values$run_index_map[[ values$Reference ]], sep="")
-                             message(sprintf("Storing Reference plot taken from Current Exp: %s of %s with run_idx %s and plotname  %s\n", current_experiment, length(values$Experiment), run_index, plotname ))
+                             message(sprintf("Storing Reference plot taken from Current Exp: %s of %s with run_idx %s and plotname  %s\n", current_experiment, length(input$Experiment), run_index, ref_plotname ))
                              pt1 <- plotly::ggplotly( (alignedChromsPlot$prefU), tooltip = c("x", "y", "text"), dynamicTicks = T) %>%
                                layout(title = list(text = paste0(alignedChromsPlot$prefU$labels$title,
                                                                  '<br>',
@@ -68,31 +71,95 @@ cacheAlignmentPlots <- function( input, output, global, values, session ){
                                values$alignmentPathPlot[[ref_path_plotname]] <- plotly::ggplotly(ggplot())
                              }
                            } else {
-                             text <- sprintf("There was an issue while performing alignment.\nYou most likely need to adjust one of the alignment settings.\n The following error occured: %s",  values$AlignObj_List[[current_experiment]])
                              
-                             values$alignedChromsPlot[[plotname]] <- plotly::ggplotly( ggplot() +
-                                                                                         annotate( "text", x = 4, y = 25, size = 8, label = text ) +
-                                                                                         ggtitle( sprintf("Run: %s", current_experiment) ) +
-                                                                                         theme_bw() + 
-                                                                                         theme( panel.grid.major = element_blank(),
-                                                                                                panel.grid.minor = element_blank(),
-                                                                                                axis.title = element_blank(),
-                                                                                                axis.text = element_bilank()
-                                                                                         ) )
+                             print("Alignment Object was empty. Turning back onto default plotting:")
+                             
+                             chrom_input <- global$chromFile[[ which(grepl(paste0(".*", current_experiment, ".*"), names(global$chromFile))) ]]
+                             osw_input <- global$oswFile[[1]]
+                             peptide <- input$Mod
+                             modification_labels <- regmatches(peptide, gregexpr("\\(.*?\\)", peptide))[[1]]
+                             naked_peptide <-  gsub( paste(gsub('\\)','\\\\)',gsub('\\(','\\\\(',modification_labels)), collapse = '|'), '', peptide )
+                             manual_annotation_coordinates <- NULL
+                             
+                             # cat( sprintf("chrom: %s\nosw: %s\nlib: %s\n", chrom_input, osw_input, global$libFile))
+                             out.plot.h <- curateXICplot( pep=naked_peptide, 
+                                                          uni_mod=peptide,
+                                                          in_sqMass=chrom_input,  df_lib=values$lib_df, in_osw=osw_input, df_osw=values$osw_df,
+                                                          plotPrecursor=input$Precursor,
+                                                          plotDetecting=input$Detecting,
+                                                          plotIdentifying=input$Identifying_Unique,
+                                                          plotIdentifying.Unique=input$Identifying_Unique,
+                                                          plotIdentifying.Shared=F,
+                                                          plotIdentifying.Against=F,
+                                                          doFacetZoom=F,
+                                                          doPlot=T,
+                                                          Charge_State=input$Charge,
+                                                          printPlot=F,
+                                                          store_plots_subdir=NULL,
+                                                          use_top_trans_pep=F,
+                                                          transition_selection_list=values$transition_selection_list,
+                                                          show_n_transitions=input$nIdentifyingTransitions,
+                                                          show_transition_scores=input$ShowTransitionScores,
+                                                          show_all_pkgrprnk=input$ShowAllPkGrps,
+                                                          show_manual_annotation = manual_annotation_coordinates,
+                                                          show_peak_info_tbl=F,
+                                                          show_legend=T,
+                                                          mzPntrs=values$mzPntrs[[ current_experiment ]]
+                             )
+                             values$alignedChromsPlot[[plotname]] <- plotly::ggplotly( p = (out.plot.h), source = plotname, tooltip = c("x", "y", "text"), dynamicTicks = T ) %>%
+                               plotly::layout(title = list( text = unique(paste0( paste0("Alignment Failed - ", out.plot.h$labels$title),
+                                                                                 '<br>',
+                                                                                 '<sup>',
+                                                                                 gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', out.plot.h$labels$subtitle)),
+                                                                                 '</sup>')) ) ) %>%
+                               event_register(event="plotly_relayout")
+                             
+                             chrom_input <- global$chromFile[[ which(grepl(paste0(".*", values$Reference, ".*"), names(global$chromFile))) ]]
+                             osw_input <- global$oswFile[[1]]
+                             peptide <- input$Mod
+                             modification_labels <- regmatches(peptide, gregexpr("\\(.*?\\)", peptide))[[1]]
+                             naked_peptide <-  gsub( paste(gsub('\\)','\\\\)',gsub('\\(','\\\\(',modification_labels)), collapse = '|'), '', peptide )
+                             manual_annotation_coordinates <- NULL
+                             
+                             # cat( sprintf("chrom: %s\nosw: %s\nlib: %s\n", chrom_input, osw_input, global$libFile))
+                             out.plot.h <- curateXICplot( pep=naked_peptide, 
+                                                          uni_mod=peptide,
+                                                          in_sqMass=chrom_input,  df_lib=values$lib_df, in_osw=osw_input, df_osw=values$osw_df,
+                                                          plotPrecursor=input$Precursor,
+                                                          plotDetecting=input$Detecting,
+                                                          plotIdentifying=input$Identifying_Unique,
+                                                          plotIdentifying.Unique=input$Identifying_Unique,
+                                                          plotIdentifying.Shared=F,
+                                                          plotIdentifying.Against=F,
+                                                          doFacetZoom=F,
+                                                          doPlot=T,
+                                                          Charge_State=input$Charge,
+                                                          printPlot=F,
+                                                          store_plots_subdir=NULL,
+                                                          use_top_trans_pep=F,
+                                                          transition_selection_list=values$transition_selection_list,
+                                                          show_n_transitions=input$nIdentifyingTransitions,
+                                                          show_transition_scores=input$ShowTransitionScores,
+                                                          show_all_pkgrprnk=input$ShowAllPkGrps,
+                                                          show_manual_annotation = manual_annotation_coordinates,
+                                                          show_peak_info_tbl=F,
+                                                          show_legend=T,
+                                                          mzPntrs=values$mzPntrs[[ current_experiment ]]
+                             )
                              
                              ref_plotname <- paste("plot_run_", values$run_index_map[[ values$Reference ]], sep="")
-                             values$alignedChromsPlot[[ref_plotname]] <- plotly::ggplotly( ggplot() +
-                                                                                             annotate( "text", x = 4, y = 25, size = 8, label = text ) +
-                                                                                             ggtitle( sprintf("Run: %s", values$Reference) ) +
-                                                                                             theme_bw() + 
-                                                                                             theme( panel.grid.major = element_blank(),
-                                                                                                    panel.grid.minor = element_blank(),
-                                                                                                    axis.title = element_blank(),
-                                                                                                    axis.text = element_bilank()
-                                                                                             ) )
+                             values$alignedChromsPlot[[ref_plotname]] <- plotly::ggplotly( p = (out.plot.h + ggplot2::xlab("Reference RT")), source = plotname, tooltip = c("x", "y", "text"), dynamicTicks = T ) %>%
+                               plotly::layout(title = list( text = unique(paste0( paste0("Alignment Failed - ", out.plot.h$labels$title),
+                                                                                  '<br>',
+                                                                                  '<sup>',
+                                                                                  gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', out.plot.h$labels$subtitle)),
+                                                                                  '</sup>')) ) ) %>%
+                               event_register(event="plotly_relayout")
+                             
+                             plot_text <- sprintf("There was an issue while performing alignment.\nWas unable to find an alignment path from similarity matrix.\n You can try adjust one of the alignment settings.\n ")
                              
                              values$alignmentPathPlot[[path_plotname]] <- plotly::ggplotly( ggplot() +
-                                                                                              annotate( "text", x = 4, y = 25, size = 8, label = text ) +
+                                                                                              annotate( "text", x = 4, y = 25, size = 8, label = plot_text ) +
                                                                                               ggtitle( sprintf("Run: %s", current_experiment) ) +
                                                                                               theme_bw() + 
                                                                                               theme( panel.grid.major = element_blank(),
@@ -111,6 +178,6 @@ cacheAlignmentPlots <- function( input, output, global, values, session ){
                      incProgress(1/length(input$Experiment))
                    } # End for
                  }) # End of Progress Tracker
-  }) # End observe
+  # }) # End observe
   
 }
