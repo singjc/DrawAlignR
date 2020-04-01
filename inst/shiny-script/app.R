@@ -129,7 +129,8 @@ server <- function(input, output, session) {
     plots = list(),
     alignedChromsPlot = list(),
     alignmentPathPlot = list(),
-    mzPntrs = NULL
+    mzPntrs = NULL,
+    start_plotting = FALSE
   )
   global <- reactiveValues(
     datapath = '', 
@@ -176,6 +177,9 @@ server <- function(input, output, session) {
       # cat("global$datapath: ", global$datapath, "\n", sep="")
       ## Observe interactive set working directory button
       workingDirectory_Input( input, output, global, values, session )
+      # if ( global$datapath!='' & global$chromFile!=''  ){
+      # values$start_plotting <- TRUE
+      # }
     } else {
       ## Observe input chromatogramfile 
       chromFile_Input_Button( input, output, global, values, session ) 
@@ -342,6 +346,7 @@ server <- function(input, output, session) {
         
         ## Check if there is no lib df returned from intial library load
         if ( !is.null( values$lib_df ) ){
+          values$start_plotting <- TRUE
           ## get unique charge state for current peptide selection
           values$lib_df %>%
             dplyr::filter( MODIFIED_SEQUENCE==input$Mod ) %>%
@@ -352,6 +357,7 @@ server <- function(input, output, session) {
           ## Update charge selection to charges available for currently selected peptide sequence.  
           updateSelectizeInput( session, inputId = 'Charge', choices = unique_charges )
         } else if ( !is.null(values$osw_df) ) {
+          values$start_plotting <- TRUE
           values$osw_df %>%
             dplyr::filter( FullPeptideName==input$Mod ) %>%
             dplyr::select( Charge ) %>%
@@ -505,6 +511,7 @@ server <- function(input, output, session) {
       input$Align 
       input$Reference
       input$refreshAlign
+      values$start_plotting
     }, {
       if ( !(input$Align)  ){
         if ( !is.null(input$n_runs) ) {

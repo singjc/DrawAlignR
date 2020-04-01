@@ -38,6 +38,7 @@ oswFile_Input_Button <- function(  input, output, global, values, session  ) {
             uni_peptide_list <- as.list(unique( osw_df$FullPeptideName ) )
             ## Update selection list with unique peptides
             updateSelectizeInput( session, inputId = 'Mod', choices = uni_peptide_list, selected = uni_peptide_list[1]  )
+            input$Mod <- uni_peptide_list[1]
           }
         }
         
