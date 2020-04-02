@@ -139,7 +139,7 @@ GeneralSettingsTab <- shiny::tabPanel( title = "General Settings",
                                                           ## help button
                                                           bsButton("plotalign_help", label = "?", size = "small")
                                        ),
-                                       shiny::tags$style(type='text/css', "#Align { width:100%; margin-top: 0px;}"),
+                                       shiny::tags$style(type='text/css', "#Align { width:100%; margin-top: 0px; background-color:red; border: 2px solid #dd4b39;}"),
                                        shiny::tags$style(type='text/css', "#refreshAlign { width:100%; margin-top: 0px;}"),
                                        shiny::tags$style(type='text/css', "#plotalign_help { width:100%; margin-top: 0px;}"),
                                        
@@ -189,7 +189,7 @@ AlignmentSettingsTab <- shiny::tabPanel( title = "Alignment Settings",
                                          
                                          ## simMeasure
                                          shiny::splitLayout(cellWidths = c("80%", "20%"),
-                                                            shiny::selectizeInput('runType', 'Experiment Type', selected = 'DIA_Proteomics_ipf', choices = c('DIA_Proteomics', 'DIA_Proteomics_ipf', 'MRM_Proteomics', 'DIA_Metabolomics'), 
+                                                            shiny::selectizeInput('runType', 'Experiment Type', selected = 'DIA_Proteomics', choices = c('DIA_Proteomics', 'DIA_Proteomics_ipf', 'MRM_Proteomics', 'DIA_Metabolomics'), 
                                                                                   options = list(
                                                                                     valueField = 'runType',
                                                                                     labelField = 'name',

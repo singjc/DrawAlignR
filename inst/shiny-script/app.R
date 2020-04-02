@@ -93,7 +93,7 @@ ui <- fluidPage(
                             )
                   )
       ),
-      ## Cacheing Progress Bar
+      ## Caching Progress Bar
       plotOutput("bar") 
       
       # absolutePanel( id='log-pannel', draggable = TRUE,
@@ -227,7 +227,7 @@ server <- function(input, output, session) {
     }
   })
   
-  # Chromatogram File Cacheing Events ---------------------------------------
+  # Chromatogram File Caching Events ---------------------------------------
   
   ## If multiple chromatogram format types are found, check to see which fortmat user wants to use  
   observeEvent( {
@@ -281,7 +281,7 @@ server <- function(input, output, session) {
                 ## Pre-Load mzML Files
                 ##*******************************
                 output$bar <- renderPlot({
-                  withProgress(message = sprintf('Cacheing %s mzML Chromatogram File(s)...', length(n_runs_index)),
+                  withProgress(message = sprintf('Caching %s mzML Chromatogram File(s)...', length(n_runs_index)),
                                detail = 'This might take a while for large chromatogram files...', value = 0, expr = {
                                  values$mzPntrs <- DrawAlignR::getmzPntrs( input, global, progress=TRUE  )
                                })
@@ -325,7 +325,7 @@ server <- function(input, output, session) {
                 runs <- filenames$runs
                 names(runs) <- rownames(filenames)
                 output$bar <- renderPlot({
-                  withProgress(message = sprintf('Cacheing %s mzML Chromatogram File(s)...', length(n_runs_index)),
+                  withProgress(message = sprintf('Caching %s mzML Chromatogram File(s)...', length(n_runs_index)),
                                detail = 'This might take a while for large chromatogram files...', value = 0, {
                                  values$mzPntrs <- DrawAlignR::getsqMassPntrs(dataPath=input$WorkingDirectory, runs)
                                })
@@ -477,7 +477,7 @@ server <- function(input, output, session) {
         
         path_plotname <- paste("pathplot_run_", run_index, sep="")
         message(sprintf("Creating Path Plot: %s\n", path_plotname))
-        plotlyOutput(path_plotname)
+        plotlyOutput(path_plotname, width = "120%", height = "1000px")
         
       })
       do.call(tagList, path_plot_output_list)

@@ -82,7 +82,7 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
   t.ref <- XICs.ref[[1]][["time"]]
   t.eXp <- mapIdxToTime( timeVec = XICs.eXp[[1]][["time"]], idx = AlignedIndices[,"indexAligned.eXp"] )
   
-
+  
   ###################### Plot unaligned chromatogram ######################################
   
   ## Get transition information from the osw file
@@ -153,67 +153,67 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
   ## Experiment Chromatogram
   ##**************************
   if ( F ){
-  message("Plotting Experiment Chromatogram")
-
-  XICs.eXp.rename <- XICs.eXp
-
-  ## Rename list using transition ids
-  names(XICs.eXp.rename) <- unlist(lapply(XICs.eXp.rename, function(x){ gsub("^X*", "", names(x)[2]) }))
-
-  for (i in seq(1:length(XICs.eXp.rename))){
-    names(XICs.eXp.rename[[i]]) <- c('RT','Int')
-    if ( length(smooth_chromatogram)>0 ){
-      XICs.eXp.rename[[i]]$Int <- signal::sgolayfilt( XICs.eXp.rename[[i]]$Int, p = smooth_chromatogram$p, n = smooth_chromatogram$n )
+    message("Plotting Experiment Chromatogram")
+    
+    XICs.eXp.rename <- XICs.eXp
+    
+    ## Rename list using transition ids
+    names(XICs.eXp.rename) <- unlist(lapply(XICs.eXp.rename, function(x){ gsub("^X*", "", names(x)[2]) }))
+    
+    for (i in seq(1:length(XICs.eXp.rename))){
+      names(XICs.eXp.rename[[i]]) <- c('RT','Int')
+      if ( length(smooth_chromatogram)>0 ){
+        XICs.eXp.rename[[i]]$Int <- signal::sgolayfilt( XICs.eXp.rename[[i]]$Int, p = smooth_chromatogram$p, n = smooth_chromatogram$n )
+      }
     }
-  }
-
-  g <- ggplot2::ggplot()
-  invisible( capture.output(suppressWarnings(
-  g <- mstools::getXIC( graphic_obj = g,
-                        df_lib = transition_table,
-                        mod = input$Mod,
-                        Isoform_Target_Charge = input$Charge,
-                        SCORE_IPF = Score_IPF_Present( global$oswFile[[1]] ),
-                        chromatogram_file = global$chromFile[ grepl(eXpRun, names(global$chromFile)) ][[1]],
-                        chromatogram_data_points_list=XICs.eXp.rename,
-                        transition_type = 'detecting',
-                        uni_mod_list = NULL,
-                        max_Int = NULL,
-                        in_osw=NULL,
-                        smooth_chromatogram=NULL,
-                        doFacetZoom=F,
-                        top_trans_mod_list=NULL,
-                        show_n_transitions=input$nIdentifyingTransitions,
-                        transition_dt=NULL )
-  )))
-  max_Int <- g$max_Int
-  g <- g$graphic_obj
-
-  ##*********************************
-  ##     ADD OSW RESULTS INFO     
-  ##*********************************
-  invisible( capture.output(suppressWarnings(
-  g <- mstools::getXIC( graphic_obj = g,
-                        df_lib = transition_table,
-                        mod = input$Mod,
-                        Isoform_Target_Charge = input$Charge,
-                        chromatogram_file = global$chromFile[ grepl(eXpRun, names(global$chromFile)) ][[1]],
-                        transition_type='none',
-                        max_Int = max_Int,
-                        in_osw = global$oswFile[[1]],
-                        SCORE_IPF = Score_IPF_Present( global$oswFile[[1]] ),
-                        doFacetZoom=F,
-                        top_trans_mod_list=NULL,
-                        RT_pkgrps=NULL,
-                        show_manual_annotation=NULL,
-                        show_peak_info_tbl=F,
-                        FacetFcnCall=NULL,
-                        show_legend = T  )
-  )))
-  max_Int <- g$max_Int
-  g <- g$graphic_obj
-
-  peXpU <- g + ggplot2::xlab("Experiment RT")
+    
+    g <- ggplot2::ggplot()
+    invisible( capture.output(suppressWarnings(
+      g <- mstools::getXIC( graphic_obj = g,
+                            df_lib = transition_table,
+                            mod = input$Mod,
+                            Isoform_Target_Charge = input$Charge,
+                            SCORE_IPF = Score_IPF_Present( global$oswFile[[1]] ),
+                            chromatogram_file = global$chromFile[ grepl(eXpRun, names(global$chromFile)) ][[1]],
+                            chromatogram_data_points_list=XICs.eXp.rename,
+                            transition_type = 'detecting',
+                            uni_mod_list = NULL,
+                            max_Int = NULL,
+                            in_osw=NULL,
+                            smooth_chromatogram=NULL,
+                            doFacetZoom=F,
+                            top_trans_mod_list=NULL,
+                            show_n_transitions=input$nIdentifyingTransitions,
+                            transition_dt=NULL )
+    )))
+    max_Int <- g$max_Int
+    g <- g$graphic_obj
+    
+    ##*********************************
+    ##     ADD OSW RESULTS INFO     
+    ##*********************************
+    invisible( capture.output(suppressWarnings(
+      g <- mstools::getXIC( graphic_obj = g,
+                            df_lib = transition_table,
+                            mod = input$Mod,
+                            Isoform_Target_Charge = input$Charge,
+                            chromatogram_file = global$chromFile[ grepl(eXpRun, names(global$chromFile)) ][[1]],
+                            transition_type='none',
+                            max_Int = max_Int,
+                            in_osw = global$oswFile[[1]],
+                            SCORE_IPF = Score_IPF_Present( global$oswFile[[1]] ),
+                            doFacetZoom=F,
+                            top_trans_mod_list=NULL,
+                            RT_pkgrps=NULL,
+                            show_manual_annotation=NULL,
+                            show_peak_info_tbl=F,
+                            FacetFcnCall=NULL,
+                            show_legend = T  )
+    )))
+    max_Int <- g$max_Int
+    g <- g$graphic_obj
+    
+    peXpU <- g + ggplot2::xlab("Experiment RT")
   }
   ###################### Plot aligned chromatogram ######################################
   
@@ -237,22 +237,22 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
   
   g <- ggplot2::ggplot()
   invisible( capture.output(suppressWarnings(
-  g <-  mstools::getXIC( graphic_obj = g, 
-                        df_lib = transition_table, 
-                        mod = input$Mod, 
-                        Isoform_Target_Charge = input$Charge,
-                        SCORE_IPF = Score_IPF_Present( global$oswFile[[1]] ),
-                        chromatogram_file = global$chromFile[ grepl(eXpRun, names(global$chromFile)) ][[1]], 
-                        chromatogram_data_points_list=XICs.eXp.aligned,
-                        transition_type = 'detecting', 
-                        uni_mod_list = NULL, 
-                        max_Int = NULL, 
-                        in_osw=NULL, 
-                        smooth_chromatogram=NULL, 
-                        doFacetZoom=F, 
-                        top_trans_mod_list=NULL, 
-                        show_n_transitions=input$nIdentifyingTransitions,
-                        transition_dt=NULL )
+    g <-  mstools::getXIC( graphic_obj = g, 
+                           df_lib = transition_table, 
+                           mod = input$Mod, 
+                           Isoform_Target_Charge = input$Charge,
+                           SCORE_IPF = Score_IPF_Present( global$oswFile[[1]] ),
+                           chromatogram_file = global$chromFile[ grepl(eXpRun, names(global$chromFile)) ][[1]], 
+                           chromatogram_data_points_list=XICs.eXp.aligned,
+                           transition_type = 'detecting', 
+                           uni_mod_list = NULL, 
+                           max_Int = NULL, 
+                           in_osw=NULL, 
+                           smooth_chromatogram=NULL, 
+                           doFacetZoom=F, 
+                           top_trans_mod_list=NULL, 
+                           show_n_transitions=input$nIdentifyingTransitions,
+                           transition_dt=NULL )
   )))
   max_Int <- g$max_Int
   g <- g$graphic_obj
@@ -261,23 +261,23 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
   ##     ADD OSW RESULTS INFO     
   ##*********************************
   invisible( capture.output(suppressWarnings(
-  g <-  mstools::getXIC( graphic_obj = g, 
-                        df_lib = transition_table, 
-                        mod = input$Mod, 
-                        Isoform_Target_Charge = input$Charge,
-                        chromatogram_file = global$chromFile[ grepl(eXpRun, names(global$chromFile)) ][[1]], 
-                        transition_type='none', 
-                        max_Int = max_Int, 
-                        in_osw = global$oswFile[[1]], 
-                        SCORE_IPF = Score_IPF_Present( global$oswFile[[1]] ),
-                        annotate_best_pkgrp=F,
-                        doFacetZoom=F, 
-                        top_trans_mod_list=NULL, 
-                        RT_pkgrps=NULL, 
-                        show_manual_annotation=NULL, 
-                        show_peak_info_tbl=F,
-                        FacetFcnCall=NULL, 
-                        show_legend = T  )
+    g <-  mstools::getXIC( graphic_obj = g, 
+                           df_lib = transition_table, 
+                           mod = input$Mod, 
+                           Isoform_Target_Charge = input$Charge,
+                           chromatogram_file = global$chromFile[ grepl(eXpRun, names(global$chromFile)) ][[1]], 
+                           transition_type='none', 
+                           max_Int = max_Int, 
+                           in_osw = global$oswFile[[1]], 
+                           SCORE_IPF = Score_IPF_Present( global$oswFile[[1]] ),
+                           annotate_best_pkgrp=F,
+                           doFacetZoom=F, 
+                           top_trans_mod_list=NULL, 
+                           RT_pkgrps=NULL, 
+                           show_manual_annotation=NULL, 
+                           show_peak_info_tbl=F,
+                           FacetFcnCall=NULL, 
+                           show_legend = T  )
   )))
   max_Int <- g$max_Int
   g <- g$graphic_obj
@@ -311,7 +311,7 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
     run_name <- gsub('_osw_chrom[.]sqMass$|[.]chrom.mzML$|[.]chrom.sqMass$', '', basename(global$chromFile[ grepl(eXpRun, names(global$chromFile)) ][[1]]))
     
     invisible( capture.output(suppressWarnings(
-    osw_dt <- mstools::getOSWData_( oswfile = global$oswFile[[1]], run_name = run_name, mod_peptide_id = c(input$Mod, mstools::unimodTocodename(input$Mod) ), peak_group_rank_filter = T, ms2_score = T, ipf_score = use_ipf_score )
+      osw_dt <- mstools::getOSWData_( oswfile = global$oswFile[[1]], run_name = run_name, mod_peptide_id = c(input$Mod, mstools::unimodTocodename(input$Mod) ), peak_group_rank_filter = T, ms2_score = T, ipf_score = use_ipf_score )
     )))
     
     osw_dt %>%
@@ -345,7 +345,7 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
     run_name <- gsub('_osw_chrom[.]sqMass$|[.]chrom.mzML$|[.]chrom.sqMass$', '', basename(global$chromFile[ grepl(refRun, names(global$chromFile)) ][[1]]))
     
     invisible( capture.output(suppressWarnings(
-    osw_dt_ref <- mstools::getOSWData_( oswfile = global$oswFile[[1]], run_name = run_name, mod_peptide_id = c(input$Mod, mstools::unimodTocodename(input$Mod) ), peak_group_rank_filter = T, ms2_score = T, ipf_score = use_ipf_score )
+      osw_dt_ref <- mstools::getOSWData_( oswfile = global$oswFile[[1]], run_name = run_name, mod_peptide_id = c(input$Mod, mstools::unimodTocodename(input$Mod) ), peak_group_rank_filter = T, ms2_score = T, ipf_score = use_ipf_score )
     )))
     
     osw_dt_ref %>%
@@ -397,13 +397,13 @@ getAlignedFigs <- function(AlignObj, refRun, eXpRun,  XICs.ref, XICs.eXp, refPea
     # XICs.eXp[[1]][['time']][ AlignedIndices[, 'indexAligned.eXp'] ]
     # XICs.ref[[1]][["time"]][ AlignedIndices[, 'indexAligned.ref'] ]
     if ( dim(refCorresponding_rt_osw)[1]>0 ){
-    peXpA <- peXpA +
-      geom_rect(data = data.frame(xmin = refCorresponding_rt_osw$leftWidth,
-                                  xmax = refCorresponding_rt_osw$rightWidth,
-                                  ymin = max(unlist(lapply(XICs.eXp.aligned, function(x){ x$Int}))),
-                                  ymax = 0),
-                aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
-                fill = "blue", alpha = 0.2)
+      peXpA <- peXpA +
+        geom_rect(data = data.frame(xmin = refCorresponding_rt_osw$leftWidth,
+                                    xmax = refCorresponding_rt_osw$rightWidth,
+                                    ymin = max(unlist(lapply(XICs.eXp.aligned, function(x){ x$Int}))),
+                                    ymax = 0),
+                  aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+                  fill = "blue", alpha = 0.2)
     } else {
       warning( "[DrawAlignR::getAlignedFigs] Could no find Original Peak relative to index...")
     }
@@ -455,7 +455,7 @@ plotAlignedAnalytes <- function(AlignObjOutput, plotType = "All", DrawAlignR = F
     analyte <- names(AlignObjOutput)[i]
     refRun <- names(AlignObjOutput[[i]])[2]
     eXpRun <- names(AlignObjOutput[[i]])[3]
-
+    
     figs <- getAlignedFigs(AlignObj, refRun, eXpRun, XICs.ref, XICs.eXp, refPeakLabel, annotatePeak, annotateOrgPeak, global, values, input)
     
     if(DrawAlignR){
@@ -503,6 +503,8 @@ plotAlignedAnalytes <- function(AlignObjOutput, plotType = "All", DrawAlignR = F
 #'  objType = "medium")
 #' plotAlignmentPath(AlignObjOutput)
 #' @importFrom ggplot2 ggplot geom_tile geom_contour ggtitle labs theme aes element_blank
+#' @importFrom plotly ggplotly layout hide_legend
+#' @importFrom ggpubr clean_theme rotate
 #' @export
 plotAlignmentPath <- function(AlignObjOutput, title=NULL){
   message(sprintf("[DrawAlignR::plotAlignmentPath] Generating alignment path plot for %s.\n", title))
@@ -522,10 +524,10 @@ plotAlignmentPath <- function(AlignObjOutput, title=NULL){
   #   latticeExtra::as.layer(lattice::levelplot(Path, col.regions = c("transparent", "green"),
   #                                             alpha = 1, axes = FALSE))
   suppressWarnings(
-  Weight_dt <- data.table::melt( s )
+    Weight_dt <- data.table::melt( s )
   )
   suppressWarnings(
-  Path_dt <- data.table::melt( Path )
+    Path_dt <- data.table::melt( Path )
   )
   
   plot_path <- ggplot2::ggplot() +
@@ -550,7 +552,7 @@ plotAlignmentPath <- function(AlignObjOutput, title=NULL){
     plot_subtitle <- "Algorithm was not able to find a path.."
   }
   
-  plot_path
+  # plot_path
   
   p0 <- plotly::ggplotly(plot_path, dynamicTicks = T)  %>% layout(showlegend = FALSE)
   
@@ -572,21 +574,21 @@ plotAlignmentPath <- function(AlignObjOutput, title=NULL){
   class(exp_data$transition) <- "character"
   
   p1 <- plotly::ggplotly( ggplot(ref_data, aes(x=index, y=int, col=transition)  ) + geom_line()  + theme_bw() +
-    theme(axis.line = element_line(colour = "black"),
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          panel.border = element_blank(),
-          panel.background = element_blank())  + ggpubr::clean_theme(),
-    dynamicTicks = T
+                            theme(axis.line = element_line(colour = "black"),
+                                  panel.grid.major = element_blank(),
+                                  panel.grid.minor = element_blank(),
+                                  panel.border = element_blank(),
+                                  panel.background = element_blank())  + ggpubr::clean_theme(),
+                          dynamicTicks = T
   ) %>% layout(showlegend = FALSE)
   
   p2 <- plotly::ggplotly( ggplot(exp_data, aes(x=index, y=int, col=transition)  ) + geom_line()  +
-    theme(axis.line = element_line(colour = "black"),
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          panel.border = element_blank(),
-          panel.background = element_blank()) + ggpubr::rotate() + ggpubr::clean_theme(),
-    dynamicTicks = T
+                            theme(axis.line = element_line(colour = "black"),
+                                  panel.grid.major = element_blank(),
+                                  panel.grid.minor = element_blank(),
+                                  panel.border = element_blank(),
+                                  panel.background = element_blank()) + ggpubr::rotate() + ggpubr::clean_theme(),
+                          dynamicTicks = T
   ) %>% layout(showlegend = FALSE)
   
   # alignment_path_plot <- ggpubr::ggarrange(p1, NULL, plotly::ggplotly(plot_path), p2, 
@@ -594,7 +596,7 @@ plotAlignmentPath <- function(AlignObjOutput, title=NULL){
   #           widths = c(5, 1), heights = c(1, 5),
   #           common.legend = TRUE, legend = 'none')
   
-  alignment_path_plot <- hide_legend( plotly::subplot( p1, plotly_empty(), p0, p2, nrows = 2, shareX = T, shareY = T, which_layout = c(3), margin = c(0) ) ) %>%
+  alignment_path_plot <- plotly::hide_legend( plotly::subplot( p1, plotly_empty(), p0, p2, nrows = 2, shareX = T, shareY = T, which_layout = c(3), margin = c(0) ) ) %>%
     layout(title = list(text = paste0( title,
                                        '<br>',
                                        '<sup>',

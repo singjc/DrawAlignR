@@ -84,7 +84,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                 
                 ## Load OSW file
                 use_ipf_score <- Score_IPF_Present( global$oswFile[[1]] )
-                tictoc::tic("Reading and Cacheing OSW File")
+                tictoc::tic("Reading and Caching OSW File")
                 ### TODO : Need to make sure that this is extracting the correct information from the osw file when using the ipf scores
                 osw_df <- mstools::getOSWData_( oswfile=global$oswFile[[1]], decoy_filter = TRUE, ms2_score = TRUE, ipf_score =  use_ipf_score)
                 m_score_filter_var <- ifelse( length(grep( "m_score|mss_m_score", colnames(osw_df), value = T))==2, "m_score", "ms2_m_score" )
@@ -127,7 +127,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                 }
                 global$libFile <- find_file
                 ## Read in library and Cache Library onto disk
-                tictoc::tic("Reading and Cacheing Library File")
+                tictoc::tic("Reading and Caching Library File")
                 lib_df <- mstools::getPepLibData_( global$libFile[[1]] )
                 values$lib_df <- lib_df
                 tictoc::toc()

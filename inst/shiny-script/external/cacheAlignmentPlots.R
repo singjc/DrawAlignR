@@ -1,7 +1,7 @@
 cacheAlignmentPlots <- function( input, output, global, values, session ){
   MazamaCoreUtils::logger.setLevel("FATAL")
   # observeEvent(input$Reference, {
-  withProgress(message = sprintf('Generating and Cacheing Plots for %s runs...', length(input$Experiment)),
+  withProgress(message = sprintf('Generating and Caching Plots for %s runs...', length(input$Experiment)),
                detail = 'Generating aligned chromatogram plots, and alignment path plots...', value = 0, expr = {
                  for ( i in input$Experiment ) {
                    # Need local so that each item gets its own number. Without it, the value
@@ -136,7 +136,7 @@ cacheAlignmentPlots <- function( input, output, global, values, session ){
                            # }
                            
                            ## Get Alignment Path Plot
-                           alignmentPathPlot <- plotAlignmentPath( AlignObjOutput = values$AlignObj_List[[current_experiment]], title = sprintf("%s Aligned to %s", current_experiment, values$Reference) )
+                           alignmentPathPlot <- plotAlignmentPath( AlignObjOutput = values$AlignObj_List[[current_experiment]], title = sprintf("%s - %s Aligned to %s", analytes, current_experiment, input$Reference) )
                            suppressWarnings(
                              pt3 <- plotly::ggplotly( (alignmentPathPlot), tooltip = c("all"), dynamicTicks = T) %>%
                                layout(title = list(text = paste0( paste0(alignmentPathPlot$labels$title),
