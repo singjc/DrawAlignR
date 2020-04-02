@@ -61,7 +61,8 @@ ui <- fluidPage(
   
   useShinyjs(),  # Include shinyjs
   
-  titlePanel( title=div( img(src="DIAlignR-logo.jpg", width = 80, height = 80, align="top" ), ( HTML(sprintf("DrawAlignR <h6 style='display:inline'>Ver: %s</h6>", tryCatch(expr={ver<-packageVersion("DrawAlignR")}, error = function(e){ ver<-'0' }) )) ) ) ),
+  titlePanel( title=div( img(src="DIAlignR-logo.png", width = 80, height = 80, align="top" ), ( HTML(sprintf("DrawAlignR <h6 style='display:inline'>Ver: %s</h6>", tryCatch(expr={ver<-packageVersion("DrawAlignR")}, error = function(e){ ver<-'0' }) )) ) ),
+              windowTitle = HTML("<title>DrawAlignR</title> <link rel='icon' type='image/gif/png' href='DIAlignR-logo.png'>")),
   sidebarLayout(
     sidebarPanel(
       tabsetPanel(
@@ -538,6 +539,7 @@ server <- function(input, output, session) {
       input$Mod
       input$Align 
       input$refreshAlign
+      input$Charge
       values$start_plotting
     }, {
       

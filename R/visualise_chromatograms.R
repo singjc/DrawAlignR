@@ -507,7 +507,13 @@ plotAlignedAnalytes <- function(AlignObjOutput, plotType = "All", DrawAlignR = F
 plotAlignmentPath <- function(AlignObjOutput, title=NULL){
   message(sprintf("[DrawAlignR::plotAlignmentPath] Generating alignment path plot for %s.\n", title))
   Alignobj <- AlignObjOutput[[1]][[1]]
+  XICs.ref <- AlignObjOutput[[1]][[2]]
+  XICs.eXp <- AlignObjOutput[[1]][[3]]
+  refPeakLabel <- AlignObjOutput[[1]][[4]]
+  refRun <- names(AlignObjOutput[[1]])[2]
+  eXpRun <- names(AlignObjOutput[[1]])[3]
   analyte <- names(AlignObjOutput)[1]
+  
   s <- Alignobj@s
   Path <- Alignobj@path[2:nrow(Alignobj@path), 2:ncol(Alignobj@path)]
   # lattice::levelplot(s, axes = TRUE, xlab = "ref index", ylab = "eXp index",
@@ -529,18 +535,72 @@ plotAlignmentPath <- function(AlignObjOutput, title=NULL){
   if ( 1 %in% Path ){
     message("[DrawAlignR::plotAlignmentPath] Adding alignment path to weighted contour plot.\n")
     plot_path <- plot_path + ggplot2::geom_contour(data=Path_dt, ggplot2::aes(Var1, Var2, z = value), colour = "red") +
-      ggplot2::ggtitle( title ) +
+      # ggplot2::ggtitle( title ) +
       ggplot2::labs(x="ref Index", y="eXp Index") +
-      ggplot2::theme(panel.background = ggplot2::element_blank())
+      ggplot2::theme(panel.background = ggplot2::element_blank(),
+                     legend.position = "none")
+    plot_subtitle <- ""
   } else {
     message("[DrawAlignR::plotAlignmentPath] No alignment path found.\n")
     plot_path <- plot_path + 
       ggplot2::ggtitle( title ) +
       ggplot2::labs(x="ref Index", y="eXp Index", subtitle = "Algorithm was not able to find a path..") +
-      ggplot2::theme(panel.background = ggplot2::element_blank())
+      ggplot2::theme(panel.background = ggplot2::element_blank(),
+                     legend.position = "none" )
+    plot_subtitle <- "Algorithm was not able to find a path.."
   }
   
-  plot_path 
+  plot_path
   
+  p0 <- plotly::ggplotly(plot_path, dynamicTicks = T)  %>% layout(showlegend = FALSE)
+  
+  ref_data <- data.table::rbindlist(XICs.ref, idcol="transition")
+  colnames(ref_data)[3] <- "int"
+  ref_data %>%
+    dplyr::group_by( transition ) %>%
+    dplyr::mutate( index = seq(1:length(transition)) ) %>%
+    dplyr::ungroup() -> ref_data
+  
+  exp_data <- data.table::rbindlist(XICs.eXp, idcol="transition")
+  colnames(exp_data)[3] <- "int"
+  exp_data %>%
+    dplyr::group_by( transition ) %>%
+    dplyr::mutate( index = seq(1:length(transition)) ) %>%
+    dplyr::ungroup()  -> exp_data
+  
+  class(ref_data$transition) <- "character"
+  class(exp_data$transition) <- "character"
+  
+  p1 <- plotly::ggplotly( ggplot(ref_data, aes(x=index, y=int, col=transition)  ) + geom_line()  + theme_bw() +
+    theme(axis.line = element_line(colour = "black"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_blank(),
+          panel.background = element_blank())  + ggpubr::clean_theme(),
+    dynamicTicks = T
+  ) %>% layout(showlegend = FALSE)
+  
+  p2 <- plotly::ggplotly( ggplot(exp_data, aes(x=index, y=int, col=transition)  ) + geom_line()  +
+    theme(axis.line = element_line(colour = "black"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_blank(),
+          panel.background = element_blank()) + ggpubr::rotate() + ggpubr::clean_theme(),
+    dynamicTicks = T
+  ) %>% layout(showlegend = FALSE)
+  
+  # alignment_path_plot <- ggpubr::ggarrange(p1, NULL, plotly::ggplotly(plot_path), p2, 
+  #           ncol = 2, nrow = 2,  align = "hv", 
+  #           widths = c(5, 1), heights = c(1, 5),
+  #           common.legend = TRUE, legend = 'none')
+  
+  alignment_path_plot <- hide_legend( plotly::subplot( p1, plotly_empty(), p0, p2, nrows = 2, shareX = T, shareY = T, which_layout = c(3), margin = c(0) ) ) %>%
+    layout(title = list(text = paste0( title,
+                                       '<br>',
+                                       '<sup>',
+                                       plot_subtitle,
+                                       '</sup>')))
+  
+  return( alignment_path_plot )
 }
 

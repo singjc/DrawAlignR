@@ -22,7 +22,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
               message("[DrawAlignR::WorkingDirectoryInput] Working Directory button pressed. Resetting textbox\n")
               reset("WorkingDirectory")
             }
-            if ( input$WorkingDirectory!="" ) {
+            if ( input$WorkingDirectory!="" | input$WorkingDirectory!=global$datapath ) {
               # print("Using test working directory input")
               global$datapath <- normalizePath( input$WorkingDirectory )
               ## Get mapping of runs to filename

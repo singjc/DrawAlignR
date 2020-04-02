@@ -189,7 +189,7 @@ AlignmentSettingsTab <- shiny::tabPanel( title = "Alignment Settings",
                                          
                                          ## simMeasure
                                          shiny::splitLayout(cellWidths = c("80%", "20%"),
-                                                            shiny::selectizeInput('runType', 'Experiment Type', selected = 'DIA_Proteomics', choices = c('DIA_Proteomics', 'DIA_Proteomics_ipf', 'MRM_Proteomics', 'DIA_Metabolomics'), 
+                                                            shiny::selectizeInput('runType', 'Experiment Type', selected = 'DIA_Proteomics_ipf', choices = c('DIA_Proteomics', 'DIA_Proteomics_ipf', 'MRM_Proteomics', 'DIA_Metabolomics'), 
                                                                                   options = list(
                                                                                     valueField = 'runType',
                                                                                     labelField = 'name',
