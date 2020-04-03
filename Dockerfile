@@ -44,6 +44,7 @@ RUN pip3 install \
 #######################
 # install R packages required 
 # (change it dependeing on the packages you need)
+RUN R -e  "install.packages('devtools')"
 RUN R -e "install.packages('shiny', repos='http://cran.rstudio.com/')"
 RUN R -e "install.packages('shinyjs')"
 RUN R -e "install.packages('shinyBS')"
