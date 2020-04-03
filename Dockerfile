@@ -1,3 +1,6 @@
+# get shiny serves plus tidyverse packages image
+FROM rocker/shiny-verse:latest
+
 #######################
 ##      System
 #######################
@@ -32,9 +35,6 @@ RUN python -m pip install \
 #######################
 ##      R language
 #######################
-# get shiny serves plus tidyverse packages image
-FROM rocker/shiny-verse:latest
-
 # install R packages required 
 # (change it dependeing on the packages you need)
 RUN R -e "install.packages('shiny', repos='http://cran.rstudio.com/')"
