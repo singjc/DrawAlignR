@@ -9,6 +9,8 @@ To install this package, follow these commands:
 ``` r
 ## Check if devtools is available, else install it and load it
 if(!require("devtools")) install.packages("devtools")
+library(devtools
+)
 ## Install BiocManager, BiocInstaller, zlibbioc, Rhdf5lib and mzR if not installed.
 ## *Note*: If you're using windows, you may have to restart your r session after each Bioconductor package install.  
 ## There may be times when BiocManager or one of the packages installed from BiocManager is not recognized as being installed until refreshing R's lib list.
@@ -17,11 +19,9 @@ if(!require("BiocInstaller")) BiocManager::install("BiocInstaller")
 if(!require("zlibbioc")) BiocManager::install("zlibbioc")
 if(!require("Rhdf5lib")) BiocManager::install("Rhdf5lib")
 if(!require("mzR")) BiocManager::install("mzR", suppressUpdates = TRUE)
+
 ## Use install_github to install necessary packages to run DrawAlignR
 install_github("Roestlab/DrawAlignR", build_vignettes=FALSE, dependencies=TRUE, type="source")
-## Load DrawAlignR
-library(DrawAlignR)
-DrawAlignR::runDrawAlignR()
 ```
 
 ## Overview
@@ -59,9 +59,22 @@ For more information, and for other flags, see [docker run](https://docs.docker.
 
 To view the tool, open a web browser and go to [localhost:3838](http://localhost:3838/)
 
+The docker image also contains a sample test dataset, located at the following directory:
+```
+/srv/shiny-server/DrawAlignR/inst/extdata/test_data/
+```
+
 ## Usage and Example
 
 For example useage of DrawAlignR, see our tutorial vignette: [Tutorial_DrawAlignR.md](https://github.com/Roestlab/DrawAlignR/tree/master/vignettes/Tutorial_DrawAlignR.md), under the **DrawAlignR User Manual** section.
+
+### Quick Start
+```
+## Load DrawAlignR
+library(DrawAlignR)
+## Run the app
+DrawAlignR::runDrawAlignR()
+```
 
 ## Expected Type of Input Data
 
