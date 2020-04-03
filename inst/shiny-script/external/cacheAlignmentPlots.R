@@ -136,15 +136,16 @@ cacheAlignmentPlots <- function( input, output, global, values, session ){
                            # }
                            
                            ## Get Alignment Path Plot
-                           alignmentPathPlot <- plotAlignmentPath( AlignObjOutput = values$AlignObj_List[[current_experiment]], title = sprintf("%s - %s Aligned to %s", analytes, current_experiment, input$Reference) )
-                           suppressWarnings(
-                             pt3 <- plotly::ggplotly( (alignmentPathPlot), tooltip = c("all"), dynamicTicks = T) %>%
-                               layout(title = list(text = paste0( paste0(alignmentPathPlot$labels$title),
-                                                                  '<br>',
-                                                                  '<sup>',
-                                                                  gsub('\\\n', ' | ', alignmentPathPlot$labels$subtitle),
-                                                                  '</sup>')))
-                           )
+                           alignmentPathPlot <- plotAlignmentPath( AlignObjOutput = values$AlignObj_List[[current_experiment]], title = sprintf("%s - %s Aligned to %s", input$Mod, current_experiment, input$Reference) )
+                           # suppressWarnings(
+                           #   pt3 <- plotly::ggplotly( (alignmentPathPlot), tooltip = c("all"), dynamicTicks = T) %>%
+                           #     layout(title = list(text = paste0( paste0(alignmentPathPlot$labels$title),
+                           #                                        '<br>',
+                           #                                        '<sup>',
+                           #                                        gsub('\\\n', ' | ', alignmentPathPlot$labels$subtitle),
+                           #                                        '</sup>')))
+                           # )
+                           pt3 <- alignmentPathPlot
                            ## Store plot for alignment path plot
                            values$alignmentPathPlot[[path_plotname]] <- pt3
                            

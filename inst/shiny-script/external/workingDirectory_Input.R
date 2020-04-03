@@ -26,7 +26,7 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
               # print("Using test working directory input")
               global$datapath <- normalizePath( input$WorkingDirectory )
               ## Get mapping of runs to filename
-              values$runs_filename_mapping <- getRunNames(global$datapath, oswMerged = TRUE, chrom_ext = ".chrom.mzML|.chrom.sqMass")
+              values$runs_filename_mapping <- getRunNames(dataPath = global$datapath, oswMerged = TRUE, chrom_ext = ".chrom.mzML|.chrom.sqMass")
               ## Search working directory for osw file, mzml files, pqpfiles
               subDirs <- normalizePath( list.dirs( path = global$datapath, full.names = T, recursive = F ) )
             } else {
