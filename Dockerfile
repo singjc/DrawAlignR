@@ -2,6 +2,9 @@
 #FROM rocker/shiny-verse:latest
 FROM ubuntu:latest
 
+## Make build no interactive
+ARG DEBIAN_FRONTEND=noninteractive
+
 #######################
 ##      System
 #######################
