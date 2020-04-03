@@ -1,7 +1,6 @@
-# get shiny serves plus tidyverse packages image
-FROM rocker/shiny-verse:latest
-
-
+#######################
+##      System
+#######################
 # system libraries of general use
 RUN apt-get update && apt-get install -y \
     sudo \
@@ -14,7 +13,28 @@ RUN apt-get update && apt-get install -y \
     libssh2-1-dev \
     libnetcdf-dev &&\
 mkdir -p /var/lib/shiny-server/bookmarks/shiny
-    
+
+#######################
+##      Python
+#######################
+# get python image
+FROM python:3.7.5-slim
+# install required python modules
+RUN python -m pip install \
+    numpy \
+    pandas \
+    click \
+    cython \
+    zlib \
+    sqlite3 \
+    pymsnumpress
+
+#######################
+##      R language
+#######################
+# get shiny serves plus tidyverse packages image
+FROM rocker/shiny-verse:latest
+
 # install R packages required 
 # (change it dependeing on the packages you need)
 RUN R -e "install.packages('shiny', repos='http://cran.rstudio.com/')"
