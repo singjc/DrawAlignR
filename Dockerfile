@@ -9,8 +9,10 @@ ARG DEBIAN_FRONTEND=noninteractive
 ##      System
 #######################
 # system libraries of general use
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     sudo \
+    build-essential \
+    gfortran \
     pandoc \
     pandoc-citeproc \
     libcurl4-gnutls-dev \
