@@ -9,7 +9,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ##      System
 #######################
 # system libraries of general use
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential\
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
     sudo \
     pandoc \
     pandoc-citeproc \
@@ -33,7 +33,7 @@ mkdir -p /var/lib/shiny-server/bookmarks/shiny
 # get python image
 #FROM python:3.7.5-slim
 # install required python modules
-RUN python -m pip install \
+RUN pip3 install \
     numpy \
     pandas \
     click \
