@@ -28,7 +28,6 @@ RUN python -m pip install \
     pandas \
     click \
     cython \
-    zlib \
     sqlite3 \
     pymsnumpress
 
