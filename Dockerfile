@@ -27,8 +27,6 @@ RUN python -m pip install \
     numpy \
     pandas \
     click \
-    cython \
-    sqlite3 \
     pymsnumpress
 
 #######################
