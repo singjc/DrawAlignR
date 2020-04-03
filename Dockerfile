@@ -1,11 +1,12 @@
 # get shiny serves plus tidyverse packages image
-FROM rocker/shiny-verse:latest
+#FROM rocker/shiny-verse:latest
+FROM ubuntu:latest
 
 #######################
 ##      System
 #######################
 # system libraries of general use
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential\
     sudo \
     pandoc \
     pandoc-citeproc \
@@ -14,14 +15,20 @@ RUN apt-get update && apt-get install -y \
     libxt-dev \
     libssl-dev \
     libssh2-1-dev \
-    libnetcdf-dev &&\
+    libnetcdf-dev \
+    r-base \
+    r-cran-randomforest \
+    python3.6 \
+    python3-pip \
+    python3-setuptools \
+    python3-dev &&\
 mkdir -p /var/lib/shiny-server/bookmarks/shiny
 
 #######################
 ##      Python
 #######################
 # get python image
-FROM python:3.7.5-slim
+#FROM python:3.7.5-slim
 # install required python modules
 RUN python -m pip install \
     numpy \
