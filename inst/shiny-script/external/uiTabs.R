@@ -177,8 +177,9 @@ GeneralSettingsTab <- shiny::tabPanel( title = "General Settings",
                                                           bsButton("OriginalRTAnnotation_help", label = "?", size = "small")
                                        ),
                                        shiny::tags$style(type='text/css', "#OriginalRTAnnotation { width:100%; margin-top: 0px;}"),
-                                       shiny::tags$style(type='text/css', "#OriginalRTAnnotation_help { width:100%; margin-top: 0px;}")
+                                       shiny::tags$style(type='text/css', "#OriginalRTAnnotation_help { width:100%; margin-top: 0px;}"),
                                        
+                                       actionButton("copy", "Copy File")
                                        
 ) # End of GeneralSettingsTab
 

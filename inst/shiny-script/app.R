@@ -122,6 +122,14 @@ ui <- fluidPage(
 # unzoom_double_click <<- NULLi
 # TODO Use tools::file_ext(global$chromFile, exts=c("mzML", "mzML.gz", "chrom.mzML")) for getting files, this is more precise.
 server <- function(input, output, session) {
+  destDir <- '/data/'
+  file_to_cp <- '/srv/shiny-server/DrawAlignR/inst/shiny-script/mstools-trace.log'
+  observeEvent(input$copy,{
+    cat("Copying file to:", destDir,"\n")
+    result <- file.copy( file_to_cp,
+                         file.path(destDir, basename(file_to_cp)) )
+    cat("Done copying file to:", destDir,"/", basename(file_to_cp), "\n")
+  })
   
   # Server Help Annotations -------------------------------------------------
   
