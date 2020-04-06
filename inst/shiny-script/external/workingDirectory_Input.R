@@ -84,14 +84,24 @@ workingDirectory_Input <- function( input, output, global, values, session ) {
                 
                 ## Load OSW file
                 use_ipf_score <- Score_IPF_Present( global$oswFile[[1]] )
-                tictoc::tic("Reading and Caching OSW File")
+                tictoc::tic()
                 ### TODO : Need to make sure that this is extracting the correct information from the osw file when using the ipf scores
                 osw_df <- mstools::getOSWData_( oswfile=global$oswFile[[1]], decoy_filter = TRUE, ms2_score = TRUE, ipf_score =  use_ipf_score)
                 m_score_filter_var <- ifelse( length(grep( "m_score|mss_m_score", colnames(osw_df), value = T))==2, "m_score", "ms2_m_score" )
                 osw_df %>%
                   dplyr::filter( !is.na(m_score_filter_var)) -> osw_df
                 values$osw_df <- osw_df
-                tictoc::toc()
+                exec_time <- tictoc::toc(quiet = TRUE)
+                message( sprintf("[DrawAlignR::workingDirectory_Input] Caching OSW Feature Scoring Data took %s seconds", round(exec_time$toc - exec_time$tic, 3) ))
+                
+                if ( input$ShowTransitionScores ){
+                  tictoc::tic()
+                  transition_dt <- mstools::getTransitionScores_( oswfile = in_osw, run_name = "", precursor_id = "", peptide_id = "")
+                  values$transition_dt <- transition_dt
+                  exec_time <- tictoc::toc(quiet = TRUE)
+                  message( sprintf("[DrawAlignR::workingDirectory_Input] Caching Transition Feature Scoring Data took %s seconds", round(exec_time$toc - exec_time$tic, 3) ))
+                }
+                
                 if (  is.null( values$lib_df ) ){
                   ## Get list of unique modified peptides
                   uni_peptide_list <- as.list(unique( osw_df$FullPeptideName ) )

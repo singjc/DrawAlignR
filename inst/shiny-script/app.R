@@ -122,9 +122,10 @@ ui <- fluidPage(
 # unzoom_double_click <<- NULLi
 # TODO Use tools::file_ext(global$chromFile, exts=c("mzML", "mzML.gz", "chrom.mzML")) for getting files, this is more precise.
 server <- function(input, output, session) {
-  destDir <- '/data/'
-  file_to_cp <- '/srv/shiny-server/DrawAlignR/inst/shiny-script/mstools-trace.log'
+  ## Copy logs for debugging
   observeEvent(input$copy,{
+    destDir <- '/data/'
+    file_to_cp <- '/srv/shiny-server/DrawAlignR/inst/shiny-script/mstools-trace.log'
     cat("Copying file to:", destDir,"\n")
     result <- file.copy( file_to_cp,
                          file.path(destDir, basename(file_to_cp)) )
@@ -145,6 +146,8 @@ server <- function(input, output, session) {
     Experiments_to_Align = '',
     transition_selection_list = list(),
     lib_df = NULL,
+    osw_df = NULL,
+    transition_dt =NULL,
     reference_plotted = FALSE,
     drives = shinyFiles::getVolumes(),
     plots = list(),
@@ -618,6 +621,7 @@ server <- function(input, output, session) {
                                                                 transition_selection_list=values$transition_selection_list,
                                                                 show_n_transitions=input$nIdentifyingTransitions,
                                                                 show_transition_scores=input$ShowTransitionScores,
+                                                                transition_dt=values$transition_dt,
                                                                 show_all_pkgrprnk=input$ShowAllPkGrps,
                                                                 show_manual_annotation = manual_annotation_coordinates,
                                                                 show_peak_info_tbl=F,

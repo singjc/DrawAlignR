@@ -481,7 +481,7 @@ PlottingSettingsTab <- shiny::tabPanel( title = "Plot Settings",
                                         shiny::textInput(inputId = "bIdent", label = "identifying b-ions", placeholder = "Enter values separated by a comma..."),                    
                                         
                                         ## ShowTransitionScores
-                                        shiny::checkboxInput('ShowTransitionScores', 'Show Transition Scores (hover tooltip)', value = FALSE),
+                                        shiny::checkboxInput('ShowTransitionScores', 'Show Transition Scores (hover tooltip)', value = TRUE),
                                         
                                         ## ShowAllPkGrps
                                         shiny::checkboxInput('ShowAllPkGrps', 'Show All Peak-Groups', value = FALSE),
