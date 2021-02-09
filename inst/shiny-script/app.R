@@ -9,7 +9,6 @@
 #' @import shinyBS
 #' @import plotly
 #' @importFrom  DIAlignR getGlobalAlignment getAlignObj 
-#' @importFrom mstools getXIC getTransitionScores_ unimodTocodename codenameTounimod getChromatogramDataPoints_ getPepLibData_ getOSWData_ log_setup getmzPntrs getsqMassPntrs
 #'
 
 ## This should be done only if the user does not have the package, otherwise it will install everytime the app is run, and will be very slow for installing large packages.
@@ -36,12 +35,14 @@ library(shinyjs)
 library(shinyFiles)
 library(shinyWidgets)
 library(shinyBS)
+library(shinyalert)
 library(plotly)
 library(DrawAlignR)
+library(DBI)
 # library(mstools)
 # library(DIAlignR)
 
-
+# soetwd("./inst/shiny-script/")
 
 source( "external/uiTabs.R", local = TRUE )
 source( "external/server_help_description_text.R", local = TRUE )
@@ -50,11 +51,14 @@ source( "external/libFile_Input_Button.R", local = TRUE )
 source( "external/oswFile_Input_Button.R", local = TRUE )
 source( "external/workingDirectory_Input.R", local = TRUE )
 source( "external/linkZoomEvent.R", local = TRUE )
+source( "external/cacheChromatogramData.R", local = TRUE )
 source( "external/cacheAlignmentPlots.R", local = TRUE )
 source( "external/drawAlignedPlots.R", local = TRUE )
 source( "external/clearPlots.R", local = TRUE )
 # source( "external/withConsoleRedirect.R", local = TRUE )
 # source( "external/customswitchButton.R", local = TRUE )
+
+# setwd("../../")
 
 # UI ----------------------------------------------------------------------
 
@@ -63,6 +67,7 @@ ui <- fluidPage(
   theme = "button.css",
   
   useShinyjs(),  # Include shinyjs
+  useShinyalert(),  # Set up shinyalert
   
   titlePanel( title=div( img(src="DIAlignR-logo.png", width = 80, height = 80, align="top" ), ( HTML(sprintf("DrawAlignR <h6 style='display:inline'>Ver: %s</h6>", tryCatch(expr={ver<-packageVersion("DrawAlignR")}, error = function(e){ ver<-'0' }) )) ) ),
               windowTitle = HTML("<title>DrawAlignR</title> <link rel='icon' type='image/gif/png' href='DIAlignR-logo.png'>")),
@@ -120,7 +125,7 @@ ui <- fluidPage(
 # print(list.files( getwd(), full.names = T, recursive = T) )
 # lapply(list.files("./R/", full.names = T), function( source_file ) { message(sprintf("Loading Source File: %s\n", source_file)); source(source_file, local = TRUE) } )
 # unzoom_double_click <<- NULLi
-# TODO Use tools::file_ext(global$chromFile, exts=c("mzML", "mzML.gz", "chrom.mzML")) for getting files, this is more precise.
+# TODO Use tools::file_ext(app.obj$chromFile, exts=c("mzML", "mzML.gz", "chrom.mzML")) for getting files, this is more precise.
 server <- function(input, output, session) {
   ## Copy logs for debugging
   observeEvent(input$copy,{
@@ -139,11 +144,36 @@ server <- function(input, output, session) {
   
   # Server Reactive Values --------------------------------------------------
   
-  ## reactive values object to store some re-usable stuff
-  values <- reactiveValues(
+  ## reactive app.obj object to store some re-usable stuff
+  app.obj <- reactiveValues(
+    datapath = '', 
+    previous_datapath = '',
+    chromFile = '', 
+    libFile = '', 
+    oswFile = '', 
+    mostRecentDir = getwd(), 
+    foundChromFiles = list(mzml=list(), sqmass=list()), 
+    cacheChromData = T,
+    ChromDatabase = F,
+    mzPntrsdb = '',
+    chromTypes_available = "",
+    chrom_ext = "",
+    plotly.autorange.x = T,
+    plotly.autorange.y = T,
+    link_zoom_range_current = list(),
+    unzoom_double_click = NULL,
+    run_mapping_table = list(run_id=numeric(), 
+                             runs=character(), 
+                             plot_id=character(), 
+                             reference=logical(), 
+                             experiment=logical(),
+                             display=logical(),
+                             chromfile_path=character()
+    ),
     Reference = '',
     Previous_Reference = '',
     Experiments_to_Align = '',
+    # run_mapping_table = "",
     transition_selection_list = list(),
     lib_df = NULL,
     osw_df = NULL,
@@ -154,23 +184,27 @@ server <- function(input, output, session) {
     alignedChromsPlot = list(),
     alignmentPathPlot = list(),
     mzPntrs = NULL,
-    start_plotting = FALSE
+    start_plotting = FALSE,
+    app_notification_ids = character(0)
   )
-  global <- reactiveValues(
-    datapath = '', 
-    previous_datapath = '',
-    chromFile = '', 
-    libFile = '', 
-    oswFile = '', 
-    mostRecentDir = getwd(), 
-    foundChromFiles = list(mzml=list(), sqmass=list()), 
-    chromTypes_available = "",
-    chrom_ext = "",
-    plotly.autorange.x = T,
-    plotly.autorange.y = T,
-    link_zoom_range_current = list(),
-    unzoom_double_click = NULL
-  )
+  ## Append class DrawAlignR
+  # class(app.obj) <- "DrawAlignR"
+  class(app.obj) <- append(class(app.obj), "DrawAlignR")
+  # global <- reactiveValues(
+  #   datapath = '', 
+  #   previous_datapath = '',
+  #   chromFile = '', 
+  #   libFile = '', 
+  #   oswFile = '', 
+  #   mostRecentDir = getwd(), 
+  #   foundChromFiles = list(mzml=list(), sqmass=list()), 
+  #   chromTypes_available = "",
+  #   chrom_ext = "",
+  #   plotly.autorange.x = T,
+  #   plotly.autorange.y = T,
+  #   link_zoom_range_current = list(),
+  #   unzoom_double_click = NULL
+  # )
   output$chromTypes_available <- renderText({ '' })
   # link_zoom_ranges  <- reactiveValues(x = NULL, y = NULL)
   brush <- NULL
@@ -184,10 +218,26 @@ server <- function(input, output, session) {
   
   
   # Show/Hide Output Tabs ---------------------------------------------------
-  observe( {
-    if (input$Align==TRUE){
+  observeEvent( {
+                  app.obj$chromTypes_available
+                  input$Align
+    }, {
+    ## General
+    if ( length(app.obj$chromTypes_available) >= 1 && app.obj$chromTypes_available != '' ){
+      MazamaCoreUtils::logger.trace(sprintf("[DrawAlignR::app - Show/Hide Output Tabs] Showing chromPlot and oswTable tabs..."))
+      showTab(inputId = "output_tabs", target = "chromPlot")
+      showTab(inputId = "output_tabs", target = "oswTable")
+    } else {
+      MazamaCoreUtils::logger.trace(sprintf("[DrawAlignR::app - Show/Hide Output Tabs] Hiding chromPlot and oswTable tabs..."))
+      hideTab(inputId = "output_tabs", target = "chromPlot")
+      hideTab(inputId = "output_tabs", target = "oswTable")
+    }
+    ## Alignment Specific
+    if ( input$Align==TRUE ){
+      MazamaCoreUtils::logger.trace(sprintf("[DrawAlignR::app - Show/Hide Output Tabs] Showing pathPlot tabs..."))
       showTab(inputId = "output_tabs", target = "pathPlot")
     } else {
+      MazamaCoreUtils::logger.trace(sprintf("[DrawAlignR::app - Show/Hide Output Tabs] Hiding pathPlot tabs..."))
       hideTab(inputId = "output_tabs", target = "pathPlot")
     }
   })
@@ -201,22 +251,20 @@ server <- function(input, output, session) {
     withConsoleRedirect("console", {
     message("Welcome! Have fun Aligning! =)")
     if ( input$WorkingDirectoryInput ){
-      # cat("values$drives: ", names(values$drives()), "\n", sep="")
-      # cat("global$datapath: ", global$datapath, "\n", sep="")
       ## Observe interactive set working directory button
-      workingDirectory_Input( input, output, global, values, session )
-      # if ( global$datapath!='' & global$chromFile!=''  ){
-      # values$start_plotting <- TRUE
+      workingDirectory_Input( input, output, app.obj, session )
+      # if ( app.obj$datapath!='' & app.obj$chromFile!=''  ){
+      # app.obj$start_plotting <- TRUE
       # }
     } else {
       ## Observe input chromatogramfile 
-      chromFile_Input_Button( input, output, global, values, session ) 
+      chromFile_Input_Button( input, output, app.obj, session ) 
       
       ## Observe LibraryFile button
-      libFile_Input_Button( input, output, global, values, session )
+      libFile_Input_Button( input, output, app.obj, session )
       
       ## Observe OSWFile button
-      oswFile_Input_Button(  input, output, global, values, session  )
+      oswFile_Input_Button(  input, output, app.obj, session  )
       
     }
     })
@@ -224,10 +272,11 @@ server <- function(input, output, session) {
   
   ## Get mapping of runs to filename
   observeEvent( {
-    global$oswFile
-    global$chromFile
+    app.obj$oswFile
+    app.obj$chromFile
     input$chromType_Choice
   },{
+    message("INFO: Generating Mapping table between OSW-PQP-ChromFiles...")
     if ( input$chromType_Choice!='' | length(input$chromType_Choice) > 0){
       ## Get mapping of runs to filename
       if ( grepl(".*mzml", input$chromType_Choice) ){
@@ -237,8 +286,8 @@ server <- function(input, output, session) {
       } else {
         use_chrom_ext <- NULL
       }
-      if ( !is.null(use_chrom_ext) & global$oswFile!='' & all(global$chromFile!='') ){
-        values$runs_filename_mapping <- getRunNames(oswFiles = global$oswFile, chromFiles = global$chromFile, oswMerged = TRUE, chrom_ext = use_chrom_ext)
+      if ( !is.null(use_chrom_ext) & app.obj$oswFile!='' & all(app.obj$chromFile!='') ){
+        app.obj$runs_filename_mapping <<- getRunNames(oswFiles = app.obj$oswFile, chromFiles = app.obj$chromFile, oswMerged = TRUE, chrom_ext = use_chrom_ext)
       }
     }
   })
@@ -248,136 +297,11 @@ server <- function(input, output, session) {
   ## If multiple chromatogram format types are found, check to see which fortmat user wants to use  
   observeEvent( {
     input$chromType_Choice
-    global$datapath
+    app.obj$datapath
+    app.obj$runs_filename_mapping
   } , {
-    withConsoleRedirect("console", {
-    if ( input$chromType_Choice!='' ){
-      message( sprintf("Using chromtype: %s", input$chromType_Choice) )
-      tryCatch(
-        expr = {
-          if ( grepl(".*mzml", input$chromType_Choice) ){
-            if ( input$WorkingDirectoryInput  ) {
-              global$chromFile <- global$foundChromFiles$mzml
-              
-              ## Store chromatogram file run names
-              # values$chromnames <- gsub("\\.chrom\\.mzML$|\\.chrom\\.sqMass$", "", input$ChromatogramFile$name)
-              values$chromnames <- gsub("\\.chrom?\\.mzML$|\\.chrom?\\.sqMass$", "", names(global$chromFile))
-              if ( !is.null(values$osw_df) | dim(values$osw_df)[1]>0 ){
-                values$osw_df %>%
-                  dplyr::select( filename ) %>%
-                  dplyr::group_by( filename ) %>%
-                  dplyr::add_count() %>%
-                  unique() %>%
-                  dplyr::ungroup() %>%
-                  dplyr::filter( n == max(n) ) %>%
-                  dplyr::select( filename ) %>%
-                  as.character() %>%
-                  basename() %>%
-                  strsplit("\\.") %>% unlist() %>% dplyr::nth(1) -> run_with_most_features
-              } else {
-                run_with_most_features <- values$chromnames[1]
-              }
-              ## Update Reference list
-              updateSelectizeInput( session, inputId = "Reference", choices = as.list(values$chromnames), selected = as.list(run_with_most_features) )
-              ## Update Experiment list with first entry removed
-              updateSelectizeInput( session, inputId = "Experiment", choices = as.list(values$chromnames[-(match(run_with_most_features, values$chromname))]), selected = as.list(values$chromnames[-(match(run_with_most_features, values$chromname))]) )
-              ## Update n chroms input
-              n_runs_index <- c(seq(1, length(values$chromnames)))
-              names(n_runs_index) <-  paste( "Run ", seq(1, length((values$chromnames))), sep='')
-              run_index_map <- c(seq(1, length(values$chromnames)))
-              names(run_index_map) <- values$chromnames
-              values$run_index_map <- run_index_map
-              shiny::updateCheckboxGroupInput( session, inputId = "n_runs", choices = n_runs_index, selected = seq(1, length((values$chromnames))), inline = TRUE  )
-              ## Get File Extension Type
-              # fileType <- gsub( '.*\\.', '', input$ChromatogramFile$name)
-              fileType <- unique(gsub( ".*\\.", "", global$chromFile))
-              ## Store chromatogram extension
-              global$chrom_ext <- paste0(".", gsub("^.*?\\.","", global$chromFile ) )
-              if ( tolower(fileType)=='mzml' | tolower(fileType)=='mzml.gz' ){
-                ##*******************************
-                ## Pre-Load mzML Files
-                ##*******************************
-                output$bar <- renderPlot({
-                  withProgress(message = sprintf('Caching %s mzML Chromatogram File(s)...', length(n_runs_index)),
-                               detail = 'This might take a while for large chromatogram files...', value = 0, expr = {
-                                 values$mzPntrs <- DrawAlignR::getmzPntrs( input, global, progress=TRUE  )
-                               })
-                })
-                # print(mzPntrs)
-                ## Store mzPntrs container
-                # values$mzPntrs <- mzPntrs
-                
-              } 
-              
-            }
-            
-          } else if ( grepl(".*sqmass", input$chromType_Choice) ){
-            if ( input$WorkingDirectoryInput  ) {
-              global$chromFile <- global$foundChromFiles$sqmass
-              
-              ## Store chromatogram file run names
-              # values$chromnames <- gsub("\\.chrom\\.mzML$|\\.chrom\\.sqMass$", "", input$ChromatogramFile$name)
-              values$chromnames <- gsub("\\.chrom\\.mzML$|\\.chrom\\.sqMass$", "", names(global$chromFile))
-              if ( !is.null(values$osw_df) | dim(values$osw_df)[1]>0 ){
-                values$osw_df %>%
-                  dplyr::select( filename ) %>%
-                  dplyr::group_by( filename ) %>%
-                  dplyr::add_count() %>%
-                  unique() %>%
-                  dplyr::ungroup() %>%
-                  dplyr::filter( n == max(n) ) %>%
-                  dplyr::select( filename ) %>%
-                  as.character() %>%
-                  basename() %>%
-                  strsplit("\\.") %>% unlist() %>% dplyr::nth(1) -> run_with_most_features
-              } else {
-                run_with_most_features <- values$chromnames[1]
-              }
-              
-              ## Update Reference list
-              updateSelectizeInput( session, inputId = "Reference", choices = as.list(values$chromnames), selected = as.list(run_with_most_features) )
-              ## Update Experiment list with first entry removed
-              updateSelectizeInput( session, inputId = "Experiment", choices = as.list(values$chromnames[-(match(run_with_most_features, values$chromname))]), selected = as.list(values$chromnames[-(match(run_with_most_features, values$chromname))]) )
-              ## Update n chroms input
-              n_runs_index <- c(seq(1, length(values$chromnames)))
-              names(n_runs_index) <-  paste( "Run ", seq(1, length((values$chromnames))), sep='')
-              run_index_map <- c(seq(1, length(values$chromnames)))
-              names(run_index_map) <- values$chromnames
-              values$run_index_map <- run_index_map
-              shiny::updateCheckboxGroupInput( session, inputId = "n_runs", choices = n_runs_index, selected = seq(1, length((values$chromnames))), inline = TRUE  )
-              
-              ## Get File Extension Type
-              # fileType <- gsub( '.*\\.', '', input$ChromatogramFile$name)
-              fileType <- unique(gsub( ".*\\.", "", global$chromFile))
-              ## Store chromatogram extension
-              global$chrom_ext <- paste0(".", gsub("^.*?\\.","", global$chromFile ) )
-              if ( tolower(fileType)=='sqmass' ){
-                ##*******************************
-                ## Pre-Load sqMass Files
-                ##*******************************
-                ## Get filenames from osw files and check if names are consistent between osw and mzML files. 
-                filenames <- getRunNames( input$WorkingDirectory, oswMerged=TRUE, chrom_ext=".chrom.sqMass")
-                runs <- filenames$runs
-                names(runs) <- rownames(filenames)
-                output$bar <- renderPlot({
-                  withProgress(message = sprintf('Caching %s mzML Chromatogram File(s)...', length(n_runs_index)),
-                               detail = 'This might take a while for large chromatogram files...', value = 0, {
-                                 values$mzPntrs <- DrawAlignR::getsqMassPntrs(dataPath=input$WorkingDirectory, runs)
-                               })
-                })
-                # values$mzPntrs <- mzPntrs
-              }
-            }
-          } else {
-            warning(sprintf("There was an issue with the chromType, selection is not a currently supported format: %s", input$chromType_Choice))
-          }
-        },
-        error = function(e){
-          message(sprintf("[chromType_Choice:cache mzML] There was the following error that occured during Chromatogram Path Searching: %s\n", e$message))
-        }
-      ) # End tryCatch
-    }
-  }) # end withConsoleRedirect
+    ## TODO put the caching function here
+    cacheChromatogramData( input, output, app.obj, session )
   }) # End observer
   
   # Reference and Experiment Input Events -----------------------------------
@@ -387,24 +311,79 @@ server <- function(input, output, session) {
   observeEvent( input$Reference, {
     withConsoleRedirect("console", {
     ## Get Reference Run
-    values$Reference <- input$Reference
-    if ( values$Reference!=values$Previous_Reference & values$Previous_Reference!='' ){
-      message(sprintf("Previous Reference: %s --> New Reference: %s\n", values$Previous_Reference, values$Reference ))
-      # values$reference_plotted <- FALSE
-      # ref_plotname <- paste("plot_run_", values$run_index_map[[ values$Previous_Reference ]], sep="")
-      # clearPlots( input, output, global, values, session )
+    app.obj$Reference <- input$Reference
+    if ( app.obj$Reference!=app.obj$Previous_Reference & app.obj$Previous_Reference!='' ){
+      message(sprintf("Previous Reference: %s --> New Reference: %s\n", app.obj$Previous_Reference, app.obj$Reference ))
+      # app.obj$reference_plotted <- FALSE
+      # ref_plotname <- paste("plot_run_", app.obj$run_index_map[[ app.obj$Previous_Reference ]], sep="")
+      # clearPlots( input, output, app.obj, session )
     }
-    values$Previous_Reference <- input$Reference
+    app.obj$Previous_Reference <- input$Reference
     ## Get Experiments minuc Reference
-    values$Experiments_to_Align <- values$chromnames[ !(values$chromnames %in% input$Reference) ]
+    app.obj$Experiments_to_Align <- app.obj$chromnames[ !(app.obj$chromnames %in% input$Reference) ]
     ## Update Experiment list with first entry removed
-    updateSelectizeInput( session, inputId = "Experiment", choices = as.list(values$Experiments_to_Align), selected = as.list(values$Experiments_to_Align) )
+    updateSelectizeInput( session, inputId = "Experiment", choices = as.list(app.obj$Experiments_to_Align), selected = as.list(app.obj$Experiments_to_Align) )
     
     ##TODO HERE
-    shiny::updateCheckboxGroupInput( session, inputId = "n_runs", choices = n_runs_index, selected = seq(1, length((values$chromnames))), inline = TRUE  )
+    # shiny::updateCheckboxGroupInput( session, inputId = "n_runs", choices = n_runs_index, selected = seq(1, length((app.obj$chromnames))), inline = TRUE  )
     }) # End withConsoleRedirect
   }) # End observer
+
+  # Runs to Display ---------------------------------------------------------
+
+## Observe runs to display to show which runs to display
+  observeEvent( input$runs_to_display, {
+    withConsoleRedirect( "console", {
+      if ( !is.null(input$runs_to_display) ){
+        ## These are the runs that will be dispalyed
+        message( sprintf("These are the current runs to display:\n%s", paste( paste( "Run_", seq(1, length(input$runs_to_display)), input$runs_to_display, sep = " "), collapse = "\n") ) )
+        app.obj$n_runs <- seq(1, length(input$runs_to_display))
+        app.obj$runs_to_display <- input$runs_to_display
+        
+      } else {
+        app.obj$runs_to_display <- ""
+      warning("There are no runs selected to display!")
+    }
+    
+  })
+}, ignoreNULL = FALSE)
   
+  # Observe changes in Reference, Experiment and  runs to display -----------
+  
+  observeEvent( {
+    app.obj$runs_to_display
+    app.obj$Reference
+    app.obj$Experiments_to_Align
+  }, {
+    ## Update mapping table
+    if ( length(app.obj$run_mapping_table$chromfile_path) < nrow(app.obj$runs_filename_mapping) ){
+      print("INFO: Reseting run_mapping_table, detected a change in number of chromatogram files.")
+      app.obj$run_mapping_table <- list(run_id=numeric(), 
+           runs=character(), 
+           plot_id=character(), 
+           reference=logical(), 
+           experiment=logical(),
+           display=logical(),
+           chromfile_path=character()
+      )
+    }
+
+    app.obj$run_mapping_table$runs <- c(app.obj$chromnames[app.obj$chromnames %in% app.obj$Reference], app.obj$chromnames[!(app.obj$chromnames %in% app.obj$Reference)])
+    app.obj$run_mapping_table$run_id <- seq(1, length(app.obj$run_mapping_table$runs))
+    app.obj$run_mapping_table$plot_id <- paste("plot_run_", app.obj$run_mapping_table$run_id, sep="")
+    app.obj$run_mapping_table$reference <- app.obj$run_mapping_table$runs %in% app.obj$Reference
+    app.obj$run_mapping_table$experiment <- app.obj$run_mapping_table$runs %in% app.obj$Experiments_to_Align
+    app.obj$run_mapping_table$display <- app.obj$run_mapping_table$runs %in% input$runs_to_display
+    app.obj$run_mapping_table$chromfile_path <- unlist(lapply( app.obj$run_mapping_table$runs, function(x){  unlist(app.obj$chromFile)[  grepl(x, (app.obj$chromFile)) ] } ))
+    app.obj$run_mapping_table$chromfile_path <- as.character(app.obj$run_mapping_table$chromfile_path)
+    app.obj$run_mapping_table <- as.data.frame( app.obj$run_mapping_table )
+   
+    app.obj$runs_filename_mapping %>% 
+      tibble::rownames_to_column(var="run_number") %>%
+      merge(., app.obj$run_mapping_table, by="runs", all.y=T ) %>%
+      dplyr::arrange( run_id ) -> app.obj$run_mapping_table
+    
+  })
   # Peptide Selection Event -------------------------------------------------
   
   ## Observe Peptide Selection
@@ -412,30 +391,7 @@ server <- function(input, output, session) {
     withConsoleRedirect("console", {
     tryCatch(
       expr = {
-        
-        ## Check if there is no lib df returned from intial library load
-        if ( !is.null( values$lib_df ) ){
-          values$start_plotting <- TRUE
-          ## get unique charge state for current peptide selection
-          values$lib_df %>%
-            dplyr::filter( MODIFIED_SEQUENCE==input$Mod ) %>%
-            dplyr::select( PRECURSOR_CHARGE ) %>%
-            unique() %>%
-            as.list() -> unique_charges
-          names(unique_charges) <- unique_charges
-          ## Update charge selection to charges available for currently selected peptide sequence.  
-          updateSelectizeInput( session, inputId = 'Charge', choices = unique_charges )
-        } else if ( !is.null(values$osw_df) ) {
-          values$start_plotting <- TRUE
-          values$osw_df %>%
-            dplyr::filter( FullPeptideName==input$Mod ) %>%
-            dplyr::select( Charge ) %>%
-            unique() %>%
-            as.list() -> unique_charges
-          names(unique_charges) <- unique_charges
-          ## Update charge selection to charges available for currently selected peptide sequence.  
-          updateSelectizeInput( session, inputId = 'Charge', choices = unique_charges )
-        }
+        DrawAlignR:::update_charge_list( input, output, app.obj, session )
       },
       error = function(e){
         message(sprintf("[Updating Charge Drop Down List] There was the following error that occured during Charge Drop Down List: %s\n", e$message))
@@ -455,15 +411,15 @@ server <- function(input, output, session) {
         expr = {
           
           if ( input$yIdent!="" ){
-            values$transition_selection_list$y <- c(text2numericInput(input$yIdent))
+            app.obj$transition_selection_list$y <- c(text2numericInput(input$yIdent))
           } else {
-            values$transition_selection_list$y <- NULL
+            app.obj$transition_selection_list$y <- NULL
           }
           
           if ( input$bIdent!="" ){
-            values$transition_selection_list$b <- c(text2numericInput(input$bIdent))
+            app.obj$transition_selection_list$b <- c(text2numericInput(input$bIdent))
           } else {
-            values$transition_selection_list$b <- NULL
+            app.obj$transition_selection_list$b <- NULL
           }
         }, 
         error = function(e){
@@ -477,13 +433,15 @@ server <- function(input, output, session) {
   # Plot Control Events -----------------------------------------------------
   
   
-  observeEvent(input$n_runs,{
+  observeEvent(app.obj$run_mapping_table,{
     withConsoleRedirect("console", {
+      
+    if ( !all(unlist(lapply(app.obj$run_mapping_table, length))==0) ){
     #Generate set of variable plots
     output$plots <- renderUI({
       
-      plot_output_list <- lapply(1:length(input$n_runs), function(i) {
-        run_index <- input$n_runs[[i]]
+      plot_output_list <- lapply(1:length(app.obj$run_mapping_table$run_id), function(i) {
+        run_index <- app.obj$run_mapping_table$run_id[[i]]
         
         plotname <- paste("plot_run_", run_index, sep="")
         message(sprintf("Creating Plot: %s\n", plotname))
@@ -507,8 +465,8 @@ server <- function(input, output, session) {
     #Generate set of variable plots for path plots
     output$pathplots <- renderUI({
       
-      path_plot_output_list <- lapply(1:length(input$n_runs), function(i) {
-        run_index <- input$n_runs[[i]]
+      path_plot_output_list <- lapply(1:length(app.obj$run_mapping_table$run_id), function(i) {
+        run_index <- app.obj$run_mapping_table$run_id[[i]]
         
         path_plotname <- paste("pathplot_run_", run_index, sep="")
         message(sprintf("Creating Path Plot: %s\n", path_plotname))
@@ -518,6 +476,10 @@ server <- function(input, output, session) {
       do.call(tagList, path_plot_output_list)
       
     })
+    
+    } ### End if
+    
+    
     }) # End withConsoleRedirect
   }) # End observer
   
@@ -547,13 +509,13 @@ server <- function(input, output, session) {
   
   # oswTable Output ---------------------------------------------------------
   
-  observeEvent(input$n_runs,{
+  observeEvent(app.obj$run_mapping_table,{
     withConsoleRedirect("console", {
     #Generate set of variable oswtables
     output$oswtables <- renderUI({
       
-      datatable_output_list <- lapply(1:length(input$n_runs), function(i) {
-        run_index <- input$n_runs[[i]]
+      datatable_output_list <- lapply(1:length(app.obj$run_mapping_table$run_id), function(i) {
+        run_index <- app.obj$run_mapping_table$run_id[[i]]
         
         tablename <- paste("oswtable_run_", run_index, sep="")
         message(sprintf("Creating osw table: %s\n", tablename))
@@ -567,6 +529,18 @@ server <- function(input, output, session) {
   }) # End withConsoleRedirect
   }) # End observer
   
+
+  # Notifications -----------------------------------------------------------
+  observeEvent(input$close_notifications, {
+    if (length(app.obj$app_notification_ids)>0){
+      for ( i in app.obj$app_notification_ids){
+        removeNotification(app.obj$app_notification_ids[1])
+        app.obj$app_notification_ids <- app.obj$app_notification_ids[-1]
+      }
+      
+    }
+  })
+  
   # Main Observation Event --------------------------------------------------
   
   observeEvent( 
@@ -576,105 +550,105 @@ server <- function(input, output, session) {
       input$refreshAlign
       input$Charge
       input$Reference
-      values$start_plotting
+      app.obj$start_plotting
+      app.obj$run_mapping_table
     }, {
       
       withConsoleRedirect("console", { 
         if ( !(input$Align)  ){
-          if ( !is.null(input$n_runs) ) {
-            
-            withProgress(message = sprintf('Generating Chromatogram Plots for  %s runs...', length(input$n_runs)),
+          if ( sum(app.obj$run_mapping_table$display)>0 ) {
+            withProgress( message = sprintf('Generating Chromatogram Plots for  %s runs...', sum(app.obj$run_mapping_table$display)),
                          detail = 'Extracting Ion Chromatogram Traces...', value = 0, expr = {
                            #Generate all plots.
+                           cat("wd:", getwd(), "\n")
                            # NOTE: Should we loop over each chrom file input, or loop over each selected n runs input
-                           for ( i in seq(1,length(input$n_runs)) ) {
+                           for ( i in seq(1,dim(app.obj$run_mapping_table)[1]) ) {
+                             current_run_table <- app.obj$run_mapping_table[i, ]
+                             ## If current run is set to not to be dispalyed, skip this run
+                             if( isFALSE(current_run_table$display) ) { next }
                              local({
-                               my_i <- i
-                               run_index <- input$n_runs[[i]]
+                               current_run_table <- app.obj$run_mapping_table[i, ]
+                               
+                               # run_index <- app.obj$n_runs[[i]]
+                               run_index <- current_run_table$run_id
                                plotname <- paste("plot_run_", run_index, sep="")
                                
                                
                                #If alignment is disabled, generate standard chromatogram plot.
                                ## Warning Handles
-                               if (  all(unlist(lapply( unique(basename(unlist(global$chromFile))), function(x){!grepl(".*mzML$|.*sqMass$", x)}))) ) {
+                               if (  all(unlist(lapply( unique(basename(unlist(app.obj$chromFile))), function(x){!grepl(".*mzML$|.*sqMass$", x)}))) ) {
                                  warning('A Chromgatogram file(s) was not supplied or not found')
-                               } else if ( !grepl(".*pqp$", global$libFile) ){
+                               } else if ( !grepl(".*pqp$", app.obj$libFile) ){
                                  warning("A Library File was not supplied or not found")
-                               } else if ( !grepl(".*osw$", global$oswFile) ){
+                               } else if ( !grepl(".*osw$", app.obj$oswFile) ){
                                  warning("A Merged OSW Results File was not supplied or not found")
                                } else if (is.null(input$Mod)){
                                  warning("There was no peptide(s) found")
                                }
                                
-                               
+                               ##****************************************************
+                               ## Chromatogram Plot Generation
+                               ##****************************************************
                                tryCatch(
                                  expr = {
-                                   chrom_input <- global$chromFile[[my_i]]
-                                   osw_input <- global$oswFile[[1]]
-                                   peptide <- input$Mod
-                                   modification_labels <- regmatches(peptide, gregexpr("\\(.*?\\)", peptide))[[1]]
-                                   naked_peptide <-  gsub( paste(gsub('\\)','\\\\)',gsub('\\(','\\\\(',modification_labels)), collapse = '|'), '', peptide )
-                                   current_run_id <- rownames( values$runs_filename_mapping )[ values$runs_filename_mapping$runs %in% gsub("\\.\\w+", "", basename(chrom_input)) ]
-                                   manual_annotation_coordinates <- NULL
+                                   # chrom_input <- app.obj$chromFile[[i]]
+                                   app.obj$current_chrom_input <- as.character( current_run_table$chromfile_path )
+                                   app.obj$current_osw_input <- app.obj$oswFile[[1]]
+                                   app.obj$current_peptide <- input$Mod
+                                   app.obj$current_modification_labels <- regmatches(app.obj$current_peptide, gregexpr("\\(.*?\\)", app.obj$current_peptide))[[1]]
+                                   app.obj$current_naked_peptide <-  gsub( paste(gsub('\\)', '\\\\)',gsub('\\(', '\\\\(', app.obj$current_modification_labels)), collapse = '|'), '', app.obj$current_peptide )
+                                   app.obj$current_run_id <- current_run_table$run_number
+                                   app.obj$current_manual_annotation_coordinates <- NULL
+                                   app.obj$Precursor=input$Precursor
+                                   app.obj$Detecting=input$Detecting
+                                   app.obj$Identifying_Unique=input$Identifying_Unique
+                                   app.obj$Charge = input$Charge
+                                   app.obj$nIdentifyingTransitions = input$nIdentifyingTransitions
+                                   app.obj$ShowTransitionScores = show_transition_scores=input$ShowTransitionScores
+                                   app.obj$ShowAllPkGrps = input$ShowAllPkGrps
                                    
-                                   # cat( sprintf("chrom: %s\nosw: %s\nlib: %s\n", chrom_input, osw_input, global$libFile))
-                                   tictoc::tic("Plotting:")
-                                   out.plot.h <- curateXICplot( pep=naked_peptide, 
-                                                                uni_mod=peptide,
-                                                                in_sqMass=chrom_input,  df_lib=values$lib_df, in_osw=osw_input, df_osw=values$osw_df,
-                                                                plotPrecursor=input$Precursor,
-                                                                plotDetecting=input$Detecting,
-                                                                plotIdentifying=input$Identifying_Unique,
-                                                                plotIdentifying.Unique=input$Identifying_Unique,
-                                                                plotIdentifying.Shared=F,
-                                                                plotIdentifying.Against=F,
-                                                                doFacetZoom=F,
-                                                                doPlot=T,
-                                                                Charge_State=input$Charge,
-                                                                printPlot=F,
-                                                                store_plots_subdir=NULL,
-                                                                use_top_trans_pep=F,
-                                                                transition_selection_list=values$transition_selection_list,
-                                                                show_n_transitions=input$nIdentifyingTransitions,
-                                                                show_transition_scores=input$ShowTransitionScores,
-                                                                transition_dt=values$transition_dt,
-                                                                show_all_pkgrprnk=input$ShowAllPkGrps,
-                                                                show_manual_annotation = manual_annotation_coordinates,
-                                                                show_peak_info_tbl=F,
-                                                                show_legend=T,
-                                                                mzPntrs=values$mzPntrs[[current_run_id]]
-                                   )
+                                   MazamaCoreUtils::logger.trace('[DrawAlignR::app]  Call drawChromatogram function...')
+                                   start_plot_time <- tictoc::tic(quiet = TRUE)
+                                   out.plot.h <- DrawAlignR:::drawChromatogram( app.obj, type="default" )
+                                   end_plot_time <- tictoc::toc(quiet = TRUE)
+                                   MazamaCoreUtils::logger.trace(paste0('[DrawAlignR::app]  Plotting time: ', end_plot_time$toc - end_plot_time$tic))
                                    
-                                   tictoc::toc()
                                  }, 
                                  error = function(e){
-                                   message(sprintf("[curateXICplot] There was the following error that occured during curateXICplot function call: %s\n", e$message))
+                                   MazamaCoreUtils::logger.trace(sprintf("[DrawAlignR::app::drawChromatogram] There was the following error that occured during drawChromatogram function call: %s\n", e$message))
+                                   current_noti_id <- showNotification( sprintf("There was the following error that occured during chromatogram generation for %s:\n%s\n", plotname, e$message), duration = NULL, type="error")
+                                   app.obj$app_notification_ids <- c(app.obj$app_notification_ids, current_noti_id)
                                  }
                                ) # End tryCatch
                                
+                               ##****************************************************
+                               ## Render and Caching Chromatogram Plots
+                               ##****************************************************
                                tryCatch(
                                  expr = {    
-                                   
+                                   MazamaCoreUtils::logger.trace(sprintf("[DrawAlignR::app - rendering XIC] Preparing plot for rendering..."))
                                    ## Old method using plotly
+                                   xic_plot_title <- paste0( out.plot.h$labels$title,
+                                                         '<br>',
+                                                         '<sup>',
+                                                         gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', out.plot.h$labels$subtitle)),
+                                                         '</sup>')
+                                   # MazamaCoreUtils::logger.trace(sprintf("[DrawAlignR::app - rendering XIC] xic_plot_title: %s", xic_plot_title))
                                    plotly::ggplotly( p = (out.plot.h), source = plotname, tooltip = c("x", "y", "text"), dynamicTicks = T ) %>%
-                                     plotly::layout(title = list( text = unique(paste0( out.plot.h$labels$title,
-                                                                                        '<br>',
-                                                                                        '<sup>',
-                                                                                        gsub( ' \\| Precursor: \\d+ \\| Peptide: \\d+ \\| Charge: \\d+ | \\| ms2_m-score: .*' , ' ', gsub('\\\n', ' | ', out.plot.h$labels$subtitle)),
-                                                                                        '</sup>')) ) ) %>%
+                                     plotly::layout(title = list( text = unique(xic_plot_title) ) ) %>%
                                      event_register(event="plotly_relayout") -> p.out
-                                   
-                                   values$plots[[plotname]] <- p.out
-                                   
-                                   values$plots_org[[plotname]] <- p.out 
-                                   
-                                   global$link_zoom_range_current[[plotname]] <<- reactiveValues(`xaxis.range[0]`=values$plots_org[[plotname]]$x$layout$xaxis$range[1], `xaxis.range[1]`=values$plots_org[[plotname]]$x$layout$xaxis$range[2],
-                                                                                                 `yaxis.range[0]`=values$plots_org[[plotname]]$x$layout$yaxis$range[1], `yaxis.range[1]`=values$plots_org[[plotname]]$x$layout$yaxis$range[2])
-                                   
-                                   global$unzoom_double_click[[plotname]] <- NULL
+                                   MazamaCoreUtils::logger.trace(sprintf("[DrawAlignR::app - rendering XIC] Rendering plot: %s", plotname))
+                                   app.obj$plots[[plotname]] <- p.out
+                                   app.obj$plots_org[[plotname]] <- p.out 
+                                   MazamaCoreUtils::logger.trace(sprintf("[DrawAlignR::app - rendering XIC] Get current zoom link range..."))
+                                   app.obj$link_zoom_range_current[[plotname]] <<- reactiveValues(`xaxis.range[0]`=app.obj$plots_org[[plotname]]$x$layout$xaxis$range[1], `xaxis.range[1]`=app.obj$plots_org[[plotname]]$x$layout$xaxis$range[2],
+                                                                                                 `yaxis.range[0]`=app.obj$plots_org[[plotname]]$x$layout$yaxis$range[1], `yaxis.range[1]`=app.obj$plots_org[[plotname]]$x$layout$yaxis$range[2])
+                                   MazamaCoreUtils::logger.trace(sprintf("[DrawAlignR::app - rendering XIC] Set unzoom double click to NULL..."))
+                                   app.obj$unzoom_double_click[[plotname]] <- NULL
                                  }, 
                                  error = function(e){
-                                   message(sprintf("[rendering XIC] There was the following error that occured during XIC rendering: %s\n", e$message))
+                                   MazamaCoreUtils::logger.trace(sprintf("[DrawAlignR::app - rendering XIC] There was the following error that occured during XIC rendering: %s\n", e$message))
+                                   # message(sprintf("[rendering XIC] There was the following error that occured during XIC rendering: %s\n", e$message))
                                  }
                                ) # End tryCatch
                                
@@ -682,48 +656,53 @@ server <- function(input, output, session) {
                                
                              }) # End local
                              ## Track progress
-                             incProgress(1/length(input$n_runs))
+                             incProgress(1/dim(app.obj$run_mapping_table)[1])
                            } # End For
                            
                          }) # End of Progress Tracker
             
             ## Observe zoom
-            withProgress(message = sprintf('Drawing Chromatogram Plots for  %s runs...', length(input$n_runs)),
+            withProgress(message = sprintf('Drawing Chromatogram Plots for  %s runs...', dim(app.obj$run_mapping_table)[1]),
                          detail = 'Draw Extracted Ion Chromatograms...', value = 0, expr = {
                            # output[['plot_run_']] <<- NULL
-                           for ( i in seq(1,length(input$n_runs)) ) {
+                           for ( i in seq(1,dim(app.obj$run_mapping_table)[1]) ) {
+                             current_run_table <- app.obj$run_mapping_table[i, ]
+                             ## If current run is set to not to be dispalyed, skip this run
+                             if( isFALSE(current_run_table$display) ) { next }
                              local({
                                
                                ##********************************************************
                                ##  Chromatogram Plot Output
                                ##********************************************************
-                               run_index <- input$n_runs[[i]]
-                               plotname <- paste("plot_run_", run_index, sep="")
+                               current_run_table <- app.obj$run_mapping_table[i, ]
                                
+                               # run_index <- app.obj$n_runs[[i]]
+                               run_index <- current_run_table$run_id
+                               plotname <- paste("plot_run_", run_index, sep="")
                                output[[plotname]] <- renderPlotly({
                                  output$log <- renderText( paste(log, collapse = '\n') )
                                  
-                                 if ( (input$plotly.linkedzooming.x==FALSE & input$plotly.linkedzooming.y==FALSE) || (global$plotly.autorange.x==TRUE & global$plotly.autorange.y==TRUE)  ){
+                                 if ( (input$plotly.linkedzooming.x==FALSE & input$plotly.linkedzooming.y==FALSE) || (app.obj$plotly.autorange.x==TRUE & app.obj$plotly.autorange.y==TRUE)  ){
                                    cat("\nNo Link Zoom/reset\n")
-                                   # global$unzoom_double_click <- NULL
+                                   # app.obj$unzoom_double_click <- NULL
                                    # js$resetDoubleClick()
-                                   values$plots[[plotname]] %>% 
+                                   app.obj$plots[[plotname]] %>% 
                                      plotly::config( displayModeBar = input$plotly.displayModeBar )
                                    
                                  } else {
-                                   cat( sprintf("\nLink Zoom:\nautorange.x=%s\nautorange.y=%s\n%s\n", global$plotly.autorange.x[1], global$plotly.autorange.y[1], listTostring(reactiveValuesToList( global$link_zoom_range_current[[plotname]]))) )
-                                   values$plots[[plotname]] %>% 
+                                   cat( sprintf("\nLink Zoom:\nautorange.x=%s\nautorange.y=%s\n%s\n", app.obj$plotly.autorange.x[1], app.obj$plotly.autorange.y[1], listTostring(reactiveValuesToList( app.obj$link_zoom_range_current[[plotname]]))) )
+                                   app.obj$plots[[plotname]] %>% 
                                      plotly::config( displayModeBar = input$plotly.displayModeBar ) %>%
                                      plotly::layout(
-                                       xaxis = list( autorange=global$plotly.autorange.x[1], range=as.double(c(reactiveValuesToList( global$link_zoom_range_current[[plotname]])$`xaxis.range[0]`[1], reactiveValuesToList( global$link_zoom_range_current[[plotname]])$`xaxis.range[1]`[1])) ), 
-                                       yaxis = list( autorange=global$plotly.autorange.y[1], range=as.double(c(reactiveValuesToList( global$link_zoom_range_current[[plotname]])$`yaxis.range[0]`[1], reactiveValuesToList( global$link_zoom_range_current[[plotname]])$`yaxis.range[1]`[1])) )
+                                       xaxis = list( autorange=app.obj$plotly.autorange.x[1], range=as.double(c(reactiveValuesToList( app.obj$link_zoom_range_current[[plotname]])$`xaxis.range[0]`[1], reactiveValuesToList( app.obj$link_zoom_range_current[[plotname]])$`xaxis.range[1]`[1])) ), 
+                                       yaxis = list( autorange=app.obj$plotly.autorange.y[1], range=as.double(c(reactiveValuesToList( app.obj$link_zoom_range_current[[plotname]])$`yaxis.range[0]`[1], reactiveValuesToList( app.obj$link_zoom_range_current[[plotname]])$`yaxis.range[1]`[1])) )
                                      ) 
                                  }
                                  
                                }) # End renderPlotly
                                
                                ## Get zoom events and unzoom events for linked zooming
-                               linkZoomEvent( input, output, values, global, session, plotname )
+                               linkZoomEvent( input, output, app.obj, session, plotname )
                                
                                
                                
@@ -733,10 +712,10 @@ server <- function(input, output, session) {
                                ## Get Table tag id            
                                tablename <- paste("oswtable_run_", run_index, sep="")
                                ## Get current filename to filter table
-                               ms_file_runname <- values$runs_filename_mapping$filename[ values$runs_filename_mapping$runs %in% gsub("\\.\\w+", "", basename(global$chromFile[[i]])) ]
+                               ms_file_runname <- app.obj$runs_filename_mapping$filename[ app.obj$runs_filename_mapping$runs %in% gsub("\\.\\w+", "", basename(as.character(current_run_table$chromfile_path))) ]
                                ## Render Table            
                                output[[tablename]] <- DT::renderDataTable(
-                                 values$osw_df %>%
+                                 app.obj$osw_df %>%
                                    dplyr::filter( FullPeptideName==input$Mod & Charge==input$Charge ) %>%
                                    dplyr::mutate( filename = basename(filename) ) %>%
                                    dplyr::filter( filename== basename(ms_file_runname) ) %>%
@@ -744,19 +723,19 @@ server <- function(input, output, session) {
                                )
                                
                              }) # End Local
-                             incProgress(1/length(input$n_runs))
+                             incProgress(1/dim(app.obj$run_mapping_table)[1])
                            } # End for
                          }) # End of Progress Tracker
             
             
-          } # End !is.null(input$n_runs)
+          } # End !is.null(app.obj$n_runs)
         } else {
           cat('Alignment Option was selected\n')
           
           withProgress(message = sprintf('Performing alignment for  %s runs...', length(input$Experiment)),
                        detail = 'Dynamic Programming Alignment...', value = 0, expr = {
                          AlignObj_List <- list()
-                         values$AlignObj_List <- AlignObj_List
+                         app.obj$AlignObj_List <- AlignObj_List
                          for ( i in input$Experiment ) {
                            local({
                              
@@ -766,7 +745,7 @@ server <- function(input, output, session) {
                              # Define Experiment_i
                              current_experiment <- i
                              # Get run Indec
-                             run_index <- values$run_index_map[[ current_experiment ]]
+                             run_index <- app.obj$run_index_map[[ current_experiment ]]
                              cat( sprintf("Working on Experiment %s with Run Index: %s\n", current_experiment, run_index) )
                              
                              #Ensuring at least two runs selected, not conducting alignment against same run
@@ -783,26 +762,26 @@ server <- function(input, output, session) {
                                    # cat( sprintf( "analytes: %s\nReference: %s\nExperiment: %s\n", analytes, input$Reference, current_experiment))
                                    
                                    # suppressWarnings(
-                                   AlignObjOutput <- DrawAlignR::getAlignObjs(analytes = analytes, runs = runs, dataPath = dataPath, refRun = input$Reference, 
+                                   AlignObjOutput <- DrawAlignR::getAlignObjs(analytes = analytes, runs = runs, dataPath = dataPath, refRun = input$Reference,
                                                                               analyteInGroupLabel = input$analyteInGroupLabel, identifying = input$identifying, 
-                                                                              oswMerged = input$oswMerged, nameCutPattern = input$nameCutPattern, chrom_ext=global$chrom_ext,
+                                                                              oswMerged = input$oswMerged, nameCutPattern = input$nameCutPattern, chrom_ext=app.obj$chrom_ext,
                                                                               maxFdrQuery = input$maxFdrQuery, maxFdrLoess = input$maxFdrLoess, analyteFDR = input$analyteFDR, 
                                                                               spanvalue = input$spanvalue,  normalization = input$normalization, simMeasure = input$simMeasure,
                                                                               XICfilter = input$XICfilter, SgolayFiltOrd = input$SgolayFiltOrd, SgolayFiltLen = input$SgolayFiltLen,
                                                                               goFactor = input$goFactor, geFactor = input$geFactor, cosAngleThresh = input$cosAngleThresh, OverlapAlignment = input$OverlapAlignment,
                                                                               dotProdThresh = input$dotProdThresh, gapQuantile = input$gapQuantile, hardConstrain = input$hardConstrain, 
                                                                               samples4gradient = input$samples4gradient,  samplingTime = input$samplingTime,  RSEdistFactor = input$RSEdistFactor, 
-                                                                              objType = "medium ", mzPntrs = values$mzPntrs, runType = input$runType)
+                                                                              objType = "medium ", mzPntrs = app.obj$mzPntrs, runType = input$runType)
                                    # )
                                    tictoc::toc()
                                    cat("\n")
                                    
-                                   values$AlignObj_List[[current_experiment]] <- AlignObjOutput
-                                   cat( sprintf("Added %s to list of aligned objects.\n Total in list now: %s\n", current_experiment, paste(names( values$AlignObj_List), collapse=", ") ) )
+                                   app.obj$AlignObj_List[[current_experiment]] <- AlignObjOutput
+                                   cat( sprintf("Added %s to list of aligned objects.\n Total in list now: %s\n", current_experiment, paste(names( app.obj$AlignObj_List), collapse=", ") ) )
                                  }, 
                                  error = function(e){
                                    message(sprintf("[DrawAlignR::app::doAlignment] There was the following error that occured during Alignment: %s\n", e$message))
-                                   values$AlignObj_List[[current_experiment]] <<- e$message
+                                   app.obj$AlignObj_List[[current_experiment]] <<- e$message
                                  }
                                ) # End tryCatch
                                
@@ -820,11 +799,11 @@ server <- function(input, output, session) {
           ##    Alignment Plotting Events
           ##***********************************************
           ## Clear Plots
-          clearPlots( input, output, global, values, session )
+          clearPlots( input, output, app.obj, session )
           ## Cache Algined Plots
-          cacheAlignmentPlots( input, output, global, values, session ) 
+          cacheAlignmentPlots( input, output, app.obj, session ) 
           ## Draw Aligned Results
-          drawAlignedPlots( input, output, global, values, session ) 
+          drawAlignedPlots( input, output, app.obj, session ) 
           
           
           

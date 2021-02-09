@@ -58,7 +58,7 @@ fetchAnalytesInfo <- function(oswName, maxFdrQuery, oswMerged,
   if ( runType=="DIA_Proteomics_ipf" ) check_sqlite_table( conn=con, table="SCORE_IPF", msg="[DrawAlignR::fetchAnalytesInfo:::check_sqlite_table] Check if runType corresponds with your type of experiment.\nYou select runType: 'DIA_Proteomics_ipf'\n")
   # IF using ipf and analytes is supplied, need to use codename standard.. 
   # TODO: Make this more robust
-  if ( runType=="DIA_Proteomics_ipf" & !is.null(analytes) ) analytes <- mstools::unimodTocodename(analytes)
+  if ( runType=="DIA_Proteomics_ipf" & !is.null(analytes) ) analytes <- unimodTocodename(analytes)
   
   # Generate a query.
   ## TODO: Add fitlers for Identifying transitions at given PEP
@@ -116,7 +116,7 @@ fetchAnalytesInfo <- function(oswName, maxFdrQuery, oswMerged,
   ## Convert ids to character
   class(analytesInfo$transition_id) <- as.character()
   ## Ensure UniMod Standard
-  # analytesInfo$transition_id <- lapply(analytesInfo$transition_id, mstools::codenameTounimod )
+  # analytesInfo$transition_id <- lapply(analytesInfo$transition_id, codenameTounimod )
   exec_time <- tictoc::toc(quiet = TRUE)
   message( sprintf("[DrawAlignR::fetchAnalytesInfo(R#48)] Extracting analyte feature information for %s took %s seconds", basename(filename), round(exec_time$toc - exec_time$tic, 3) ))
   if ( dim(analytesInfo)[1]==0 ) message( sprintf("[DrawAlignR::fetchAnalytesInfo(R#48)] Warning! %s had a dataframe with %s rows found!\n", basename(filename), dim(analytesInfo)[1] ))

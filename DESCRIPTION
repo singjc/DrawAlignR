@@ -18,6 +18,7 @@ Imports: shiny,
           shinyFiles,
           shinyWidgets,
           shinyBS,
+          shinyalert,
           data.table,
           plyr,
           dplyr,
@@ -40,13 +41,10 @@ Imports: shiny,
           zoo,
           mzR, zlibbioc,
           Rcpp,
-          DIAlignR,
-          mstools
-Remotes: github::singjc/mstools,
-         github::shubham1637/DIAlignR
+          DIAlignR
+Remotes: github::shubham1637/DIAlignR
 License: MIT
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.0.2
+RoxygenNote: 7.1.1
 BugReports: Roestlab/DrawAlignR
-

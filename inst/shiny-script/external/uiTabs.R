@@ -68,7 +68,10 @@ GeneralSettingsTab <- shiny::tabPanel( title = "General Settings",
                                                                             ## Text box for user to manually input working data path
                                                                             shiny::textInput(inputId = "WorkingDirectory", "Set Working Directory",
                                                                                              placeholder = "Set Working Directory",
-                                                                                             value="") # Debuggin with default value
+                                                                                             #value="/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR_Test_Data/Synthetic_Dilution_Phosphoproteomics_Small_Subset"
+                                                                                             value="/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/PTMs_Project/Synth_PhosoPep/Justin_Synth_PhosPep/results/George_lib_repeat2/DIAlignR_Analysis/data"
+                                                                                             #value=""
+                                                                                             ) # Debuggin with default value
                                                          ),
                                                          shiny::tags$style(type='text/css', "#interactiveWorkingDirectory { width:100%; margin-top: 50px;}"),
                                                          shiny::tags$style(type='text/css', "#WorkingDirectory { width:100%; margin-top: 25px;}")
@@ -121,12 +124,38 @@ GeneralSettingsTab <- shiny::tabPanel( title = "General Settings",
                                        )),
                                        
                                        conditionalPanel( condition = "input.n_runs.length >= 1",
-                                                         #Number of plots to display
-                                                         shiny::checkboxGroupInput("n_runs", "Choose Runs to Display:",
-                                                                                   choices = NULL,
-                                                                                   selected = NULL,
-                                                                                   inline = T
-                                                         )
+                                                         # #Number of plots to display
+                                                         # shiny::checkboxGroupInput("n_runs", "Choose Runs to Display:",
+                                                         #                           choices = NULL,
+                                                         #                           selected = NULL,
+                                                         #                           inline = T
+                                                         # )
+                                                         
+                                                         # #Number of plots to display
+                                                         # shiny::selectizeInput('runs_to_display', 'Runs to Display', choices = '', multiple = TRUE, options = list(
+                                                         #   valueField = 'Run Name',
+                                                         #   labelField = 'name',
+                                                         #   searchField = 'name',
+                                                         #   options = list( ),
+                                                         #   create = FALSE, 
+                                                         #   multiple = TRUE,
+                                                         #   selected = NULL
+                                                         #   
+                                                         # ))
+
+                                                         # Number of plots to display
+                                                         shinyWidgets::pickerInput( inputId = 'runs_to_display', 
+                                                                                    label = 'Runs to Display', 
+                                                                                    choices = "", 
+                                                                                    options = list(
+                                                                                      `actions-box` = TRUE, 
+                                                                                      size = 10,
+                                                                                      `selected-text-format` = "count > 3"
+                                                                                    ), 
+                                                                                    multiple = TRUE
+                                                                                      
+                                                                                  )
+                                                         
                                        ),
                                        
                                        #Off by default. Enabled if DIAlignR should be run and aligned chromatograms should be plotted.
@@ -141,6 +170,7 @@ GeneralSettingsTab <- shiny::tabPanel( title = "General Settings",
                                                           bsButton("refreshAlign", label = "", icon = icon("refresh"), size = "small"),
                                                           ## help button
                                                           bsButton("plotalign_help", label = "?", size = "small")
+                                                          
                                        ),
                                        shiny::tags$style(type='text/css', "#Align { width:100%; margin-top: 0px; background-color:red; border: 2px solid #dd4b39;}"),
                                        shiny::tags$style(type='text/css', "#refreshAlign { width:100%; margin-top: 0px;}"),
@@ -157,7 +187,7 @@ GeneralSettingsTab <- shiny::tabPanel( title = "General Settings",
                                          selected = NULL
                                        )),
                                        
-                                       #Charge of desired peptide (Specific charge must be in data set)
+                                       #Experimental runs to align
                                        shiny::selectizeInput('Experiment', 'Experiment(s) to Align', choices = '', multiple = TRUE, options = list(
                                          valueField = 'Run Name',
                                          labelField = 'name',
@@ -179,7 +209,8 @@ GeneralSettingsTab <- shiny::tabPanel( title = "General Settings",
                                        shiny::tags$style(type='text/css', "#OriginalRTAnnotation { width:100%; margin-top: 0px;}"),
                                        shiny::tags$style(type='text/css', "#OriginalRTAnnotation_help { width:100%; margin-top: 0px;}"),
                                        
-                                       actionButton("copy", "Copy File")
+                                       actionButton("copy", "Save Log File"),
+                                       actionButton("close_notifications", "Close All Notifications")
                                        
 ) # End of GeneralSettingsTab
 
@@ -481,7 +512,7 @@ PlottingSettingsTab <- shiny::tabPanel( title = "Plot Settings",
                                         shiny::textInput(inputId = "bIdent", label = "identifying b-ions", placeholder = "Enter values separated by a comma..."),                    
                                         
                                         ## ShowTransitionScores
-                                        shiny::checkboxInput('ShowTransitionScores', 'Show Transition Scores (hover tooltip)', value = TRUE),
+                                        shiny::checkboxInput('ShowTransitionScores', 'Show Transition Scores (hover tooltip)', value = FALSE),
                                         
                                         ## ShowAllPkGrps
                                         shiny::checkboxInput('ShowAllPkGrps', 'Show All Peak-Groups', value = FALSE),

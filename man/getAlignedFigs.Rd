@@ -13,8 +13,7 @@ getAlignedFigs(
   refPeakLabel,
   annotatePeak = FALSE,
   annotateOrgPeak = FALSE,
-  global = NULL,
-  values = NULL,
+  app.obj = NULL,
   input = NULL,
   smooth_chromatogram = NULL
 )

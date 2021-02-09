@@ -1,10 +1,10 @@
-linkZoomEvent <- function( input, output, values, global, session, plotname ){
+linkZoomEvent <- function( input, output, app.obj, session, plotname ){
   
-  setAutoRange <- function(  global, unzoom_double_click, axis ){
+  setAutoRange <- function(  app.obj, unzoom_double_click, axis ){
     if ( is.null(unzoom_double_click) ){
-      global[[axis]] <- FALSE 
+      app.obj[[axis]] <- FALSE 
     } else {
-      global[[axis]] <- TRUE 
+      app.obj[[axis]] <- TRUE 
       unzoom_double_click <<- NULL
       rm(unzoom_double_click)
     }
@@ -35,35 +35,35 @@ linkZoomEvent <- function( input, output, values, global, session, plotname ){
             if ( input$plotly.linkedzooming.x ){
               ## Set x-axis limits to current zoom events x-limits
               x_limits <- c(link_zoom_ranges$`xaxis.range[0]`[1], link_zoom_ranges$`xaxis.range[1]`[1])
-              setAutoRange( global = global, unzoom_double_click = unzoom_double_click, axis = 'plotly.autorange.x' )
+              setAutoRange( app.obj = app.obj, unzoom_double_click = unzoom_double_click, axis = 'plotly.autorange.x' )
             } else {
               ## Set x-axis limits to original plots x-axis
-              x_limits <- c(values$plots_org[[plotname_inner]]$x$layout$xaxis$range[1], values$plots_org[[plotname_inner]]$x$layout$xaxis$range[2])
-              setAutoRange( global = global, unzoom_double_click = unzoom_double_click, axis = 'plotly.autorange.x' )
+              x_limits <- c(app.obj$plots_org[[plotname_inner]]$x$layout$xaxis$range[1], app.obj$plots_org[[plotname_inner]]$x$layout$xaxis$range[2])
+              setAutoRange( app.obj = app.obj, unzoom_double_click = unzoom_double_click, axis = 'plotly.autorange.x' )
             }
             ## y-axis limits
             if ( input$plotly.linkedzooming.y ){
               ## Set y-axis limits to current zoom events y-limits
               y_limits <- c(link_zoom_ranges$`yaxis.range[0]`[1], link_zoom_ranges$`yaxis.range[1]`[1])
-              setAutoRange( global = global, unzoom_double_click = unzoom_double_click, axis = 'plotly.autorange.y' )
+              setAutoRange( app.obj = app.obj, unzoom_double_click = unzoom_double_click, axis = 'plotly.autorange.y' )
             } else {
               ## Set y-axis limits to original plots y-axis
-              y_limits <- c(values$plots_org[[plotname_inner]]$x$layout$yaxis$range[1], values$plots_org[[plotname_inner]]$x$layout$yaxis$range[2])
-              setAutoRange( global = global, unzoom_double_click = unzoom_double_click, axis = 'plotly.autorange.y' )
+              y_limits <- c(app.obj$plots_org[[plotname_inner]]$x$layout$yaxis$range[1], app.obj$plots_org[[plotname_inner]]$x$layout$yaxis$range[2])
+              setAutoRange( app.obj = app.obj, unzoom_double_click = unzoom_double_click, axis = 'plotly.autorange.y' )
             }
             
             link_zoom_ranges <- reactiveValues( `xaxis.range[0]`=x_limits[1], `xaxis.range[1]`=x_limits[2], 
                                                 `yaxis.range[0]`=y_limits[1], `yaxis.range[1]`=y_limits[2] )
             
             # message( sprintf("Updating %s link zoom with current event data from: %s\n", plotname_inner, plotname) )
-            # cat( sprintf("autorange.x=%s\nautorange.y=%s\n%s\n", global$plotly.autorange.x[1], global$plotly.autorange.y[1], listTostring(reactiveValuesToList(link_zoom_ranges) ) ))
-            global$link_zoom_range_current[[plotname_inner]] <<- link_zoom_ranges
+            # cat( sprintf("autorange.x=%s\nautorange.y=%s\n%s\n", app.obj$plotly.autorange.x[1], app.obj$plotly.autorange.y[1], listTostring(reactiveValuesToList(link_zoom_ranges) ) ))
+            app.obj$link_zoom_range_current[[plotname_inner]] <<- link_zoom_ranges
           })
         }
         # unzoom_double_click <- NULL
       } 
-      # cat( sprintf("LINE 559:global$plotly.autorange: %s \n link_zoom_ranges$`xaxis.range[0]`[1]: %s\nlink_zoom_ranges$`xaxis.range[1]`[1]: %s\nlink_zoom_ranges$`yaxis.range[0]`[1]: %s\nlink_zoom_ranges$`yaxis.range[1]`[1]: %s\n",
-      # global$plotly.autorange, as.character.null(link_zoom_range_current$`xaxis.range[0]`[1]), as.character.null(link_zoom_range_current$`xaxis.range[1]`[1]), as.character.null(link_zoom_range_current$`yaxis.range[0]`[1]), as.character.null(link_zoom_range_current$`yaxis.range[1]`[1]) ) )
+      # cat( sprintf("LINE 559:app.obj$plotly.autorange: %s \n link_zoom_ranges$`xaxis.range[0]`[1]: %s\nlink_zoom_ranges$`xaxis.range[1]`[1]: %s\nlink_zoom_ranges$`yaxis.range[0]`[1]: %s\nlink_zoom_ranges$`yaxis.range[1]`[1]: %s\n",
+      # app.obj$plotly.autorange, as.character.null(link_zoom_range_current$`xaxis.range[0]`[1]), as.character.null(link_zoom_range_current$`xaxis.range[1]`[1]), as.character.null(link_zoom_range_current$`yaxis.range[0]`[1]), as.character.null(link_zoom_range_current$`yaxis.range[1]`[1]) ) )
     }
     }
   })

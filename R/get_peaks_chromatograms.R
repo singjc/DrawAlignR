@@ -37,8 +37,8 @@ extractXIC_group <- function(mz, chromIndices, XICfilter = "sgolay", SgolayFiltO
       return(rawChrom)
     } )
   } else if ( is.data.frame(mz) ) { # TODO Need to add a better check.
-    message("[DrawAlignR::extractXIC_group] Calling mstools to extract XICs\n")
-    XIC_group <- mstools::getChromatogramDataPoints_( filename = ".sqMass", chromIndices, id_type = "chromatogramIndex", name_time = "time", name_intensity = "paste0('X', data_row$FRAGMENT_ID)", mzPntrs = mz, SgolayFiltOrd = SgolayFiltOrd, SgolayFiltLen = SgolayFiltLen )
+    message("[DrawAlignR::extractXIC_group] Calling to extract XICs\n")
+    XIC_group <- getChromatogramDataPoints_( filename = ".sqMass", chromIndices, id_type = "chromatogramIndex", name_time = "time", name_intensity = "paste0('X', data_row$FRAGMENT_ID)", mzPntrs = mz, SgolayFiltOrd = SgolayFiltOrd, SgolayFiltLen = SgolayFiltLen )
     names(XIC_group) <- NULL
   }
   message(sprintf("[DrawAlignR::extractXIC_group] Lenth of XIC_group: %s\n", length(XIC_group)))

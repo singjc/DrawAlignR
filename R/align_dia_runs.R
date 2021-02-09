@@ -55,7 +55,6 @@
 #'
 #' @references Gupta S, Ahadi S, Zhou W, Röst H. "DIAlignR Provides Precise Retention Time Alignment Across Distant Runs in DIA and Targeted Proteomics." Mol Cell Proteomics. 2019 Apr;18(4):806-817. doi: https://doi.org/10.1074/mcp.TIR118.001132 Epub 2019 Jan 31.
 #'
-#' @importFrom mstools getmzPntrs getsqMassPntrs 
 #' @export
 getAlignObjs <- function(analytes, runs, dataPath = ".", alignType = "hybrid",
                          runType = "DIA_Proteomics", refRun = NULL,
@@ -101,7 +100,7 @@ getAlignObjs <- function(analytes, runs, dataPath = ".", alignType = "hybrid",
           # Collect all the pointers for each mzML file.
           message("Collecting metadata from mzML files.")
           # mzPntrs <- getMZMLpointers(dataPath, runs)
-          mzPntrs <- mstools::getmzPntrs(dataPath, runs)
+          mzPntrs <- getmzPntrs(dataPath, runs)
           message("Metadata is collected from mzML files.")
           return_index <- "chromatogramIndex"
         }   
@@ -113,7 +112,7 @@ getAlignObjs <- function(analytes, runs, dataPath = ".", alignType = "hybrid",
           # Collect all the pointers for each mzML file.
           message("Collecting metadata from sqMass files.")
           # mzPntrs <- getMZMLpointers(dataPath, runs)
-          mzPntrs <- mstools::getsqMassPntrs(dataPath, runs, nameCutPattern = nameCutPattern, chrom_ext = chrom_ext)
+          mzPntrs <- getsqMassPntrs(dataPath, runs, nameCutPattern = nameCutPattern, chrom_ext = chrom_ext)
           message("Metadata is collected from sqMass files.")
           return_index <- "chromatogramIndex"
         }   
@@ -128,7 +127,7 @@ getAlignObjs <- function(analytes, runs, dataPath = ".", alignType = "hybrid",
       # Report analytes that are not found
       # IF using ipf and analytes is supplied, need to use codename standard.. 
       # TODO: Make this more robust
-      if ( tolower(runType)=="dia_proteomics_ipf" & !is.null(analytes) ) analytes <- mstools::unimodTocodename(analytes)
+      if ( tolower(runType)=="dia_proteomics_ipf" & !is.null(analytes) ) analytes <- unimodTocodename(analytes)
       refAnalytes <- getAnalytesName(oswFiles, analyteFDR, commonAnalytes = FALSE)
       analytesFound <- intersect(analytes, refAnalytes)
       analytesNotFound <- setdiff(analytes, analytesFound)

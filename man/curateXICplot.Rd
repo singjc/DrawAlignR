@@ -34,7 +34,9 @@ curateXICplot(
   show_peak_info_tbl = F,
   show_manual_annotation = NULL,
   show_legend = T,
-  mzPntrs = NULL
+  mzPntrs = NULL,
+  run_id = NULL,
+  mzPntrsdb = NULL
 )
 }
 \arguments{

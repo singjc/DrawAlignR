@@ -21,7 +21,7 @@ FROM CHROMATOGRAM
   filenames <- getRunNames( dataPath = dataPath, oswMerged=TRUE, nameCutPattern = nameCutPattern, chrom_ext = chrom_ext )
   filenames <- filenames[filenames$runs %in% runs,]
   
-  tictoc::tic('Pre-Loading mzML Chromatogram Files onto disk')
+  tictoc::tic('Pre-Loading sqMass Chromatogram Files onto disk')
   mzPntrs <- list()
   for ( chromatogram_input_index_num in seq(1, length(filenames$runs)) ){
     tryCatch(
@@ -48,6 +48,12 @@ FROM CHROMATOGRAM
         mzPntrs[[run]]$mz <- merge( mzPntrs[[run]]$chromHead , mzPntrs[[run]]$mz, by.x="chromatogramIndex", by.y="CHROMATOGRAM_ID", all=T)
         colnames(mzPntrs[[run]]$mz)[which(grepl("chromatogramIndex", colnames(mzPntrs[[run]]$mz)))] <- "CHROMATOGRAM_ID"
         colnames(mzPntrs[[run]]$mz)[which(grepl("chromatogramId", colnames(mzPntrs[[run]]$mz)))] <- "FRAGMENT_ID"
+        ## Append filename
+        mzPntrs[[run]]$filename <- filenames$filename[ chromatogram_input_index_num ]
+        ## Append Run Name
+        mzPntrs[[run]]$run_name <- filenames$runs[ chromatogram_input_index_num ]
+        ## Append Run Id
+        mzPntrs[[run]]$run_id <- run
         
         ## Disconnect form database
         DBI::dbDisconnect(conn)

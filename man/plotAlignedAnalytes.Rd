@@ -12,8 +12,7 @@ plotAlignedAnalytes(
   annotatePeak = FALSE,
   annotateOrgPeak = FALSE,
   saveFigs = FALSE,
-  global = NULL,
-  values = NULL,
+  app.obj = NULL,
   input = NULL
 )
 }

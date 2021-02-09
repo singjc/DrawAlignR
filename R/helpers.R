@@ -280,6 +280,38 @@ as_character_null <- function( x ){
   
 }
 
+#' @description Check Dataframe, if empty return an object and stop function call
+#' 
+#' @param df A data.frame/data.table/matrix object to check for number of rows
+#' @param return_item 
+#' @param msg error message to return
+#' @return if data.frame has 0 rows, return true, otherwise return false
+checkDataframe <- function( df, return_item, msg ){
+  if ( dim(df)[1]==0 ){
+    MazamaCoreUtils::logger.error(crayon::bold(crayon::red(msg)))
+    return( TRUE )
+  } else {
+    return( FALSE )
+  }
+}
+
+#' @description  Check numeric values if not NULL
+#' 
+#' @param numeric_obj Check if an numeric object is not NULL 
+#' @param  signif.not Return significant notation
+#' @return If numeric object is not null, round numeric object to 4 digits
+checkNumeric <- function( numeric_obj, signif.not=TRUE ){
+  if( !is.null( numeric_obj ) ){
+    if ( signif.not==FALSE ){
+      return( signif(numeric_obj, digits = 4) )
+    } else {
+      return( formatC(numeric_obj, format = "e", digits = 3) )
+    }
+  } else {
+    return( NULL )
+  }
+}
+
 #' Convert list object to printable character vectory
 #' @param list_obj A list object to coerce to character
 #' @param collapse A character vector to collapse characters on

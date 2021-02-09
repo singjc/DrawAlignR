@@ -75,14 +75,16 @@ curateXICplot <- function( pep,
                            show_peak_info_tbl=F,
                            show_manual_annotation=NULL,
                            show_legend=T,
-                           mzPntrs=NULL
+                           mzPntrs=NULL,
+                           run_id=NULL,
+                           mzPntrsdb=NULL
 ) {
   
   # Get XICs for Modified Peptides  ---------------------------------------------------------------
   
   ## Check if logging has been initialized
   if( !MazamaCoreUtils::logger.isInitialized() ){
-    mstools::log_setup()
+    log_setup()
   }
   
   tictoc::tic( paste('XIC plotting for ', pep, ' peptides took: ', sep=' '))
@@ -90,7 +92,7 @@ curateXICplot <- function( pep,
   run_name <- gsub('_osw_chrom[.]sqMass$|[.]chrom.mzML$|[.]chrom.sqMass$', '', basename(in_sqMass)) # Add a control statement here
   run <- gsub('_SW*|_SW_0|(*_-_SW[.]mzML[.]gz|[.]chrom[.]sqMass)', '', gsub('yanliu_I170114_\\d+_|chludwig_K150309_|lgillet_L\\d+_\\d+-Manchester_dirty_phospho_-_', '', run_name))
   
-  MazamaCoreUtils::logger.info( paste( crayon::blue('@ Run: ', run),'\n', sep='' ) )
+  MazamaCoreUtils::logger.info( paste('[DrawAlignR::curateXICplot] @ Run: ', run, sep='' ) )
   
   plot_chrom_error <- tryCatch({
     
@@ -98,16 +100,18 @@ curateXICplot <- function( pep,
     Isoform_Target_Charge <- Charge_State
     
     m_score_filter_var <- ifelse( length(grep( "m_score|ms2_m_score", colnames(df_osw), value = T))==2, "m_score", "ms2_m_score" )
+    
     df_osw %>%
       dplyr::filter( Sequence==pep ) %>%
       dplyr::filter( FullPeptideName==uni_mod ) %>%
       dplyr::filter( !is.na( !!rlang::sym(m_score_filter_var) ) ) %>%
       dplyr::filter( Charge==Isoform_Target_Charge ) %>%
       dplyr::filter( grepl(run_name, filename) ) -> tmp_osw_df
-    
+
+        
     if ( any(colnames(tmp_osw_df) %in% "ipf_FullPeptideName") ){
       tmp_osw_df %>%
-        dplyr::filter( ipf_FullPeptideName==mstools::unimodTocodename(uni_mod) ) -> tmp_osw_df
+        dplyr::filter( ipf_FullPeptideName==unimodTocodename(uni_mod) ) -> tmp_osw_df
     }
     
     
@@ -137,24 +141,33 @@ curateXICplot <- function( pep,
     ##***********************************##
     if ( show_transition_scores ){
       if ( is.null(transition_dt) ){
-        transition_dt <- mstools::getTransitionScores_( oswfile = in_osw, run_name = "", precursor_id = "", peptide_id = "")
+        transition_dt <- getTransitionScores_( oswfile = in_osw, run_name = "", precursor_id = "", peptide_id = "")
       } else { transition_dt <- NULL }
     } else {
       transition_dt <- NULL
     }
     
-    MazamaCoreUtils::logger.info('   ~ Starting Plotting Action\n', sep='')
+    MazamaCoreUtils::logger.info('[DrawAlignR::curateXICplot] Starting Plotting Action', sep='')
     max_Int <- 0
     mod <- uni_mod
     tictoc::tic("Plotting: ")
-    MazamaCoreUtils::logger.info( crayon::green('   --- Peptidoform: ', mod), '\n', sep='')
+    MazamaCoreUtils::logger.info( paste0('[DrawAlignR::curateXICplot] Peptidoform: ', mod))
+    
+    if(F){
+      mzPntrsdb <- "/media/justincsing/ExtraDrive1/Documents2/Roest_Lab/Github/DrawAlignR_Test_Data/Synthetic_Dilution_Phosphoproteomics_Small_Subset/sqmass/cached_chromatogram_data.mzPntrs"
+      run_id <- "run11"
+    }
+    MazamaCoreUtils::logger.trace( paste0("[DrawAlignR::curateXICplot] getmzPntrs_on_the_fly") )
+    mzPntrs <- getmzPntrs_on_the_fly(db = mzPntrsdb, runs = run_id )[[1]]
+    # MazamaCoreUtils::logger.trace( paste0("[sqmass_data_access::curateXICplot] mzPntrs: ", mzPntrs) )
+    
     ##***********************##
     ##     PLOT PRECURSOR    ##
     ##***********************##
     if ( plotPrecursor==T ){
-      
+      MazamaCoreUtils::logger.trace( paste0("[DrawAlignR::curateXICplot] Getting Precursor XIC") )
       g <- ggplot2::ggplot()
-      g <- mstools::getXIC( graphic_obj = g, 
+      g <- getXIC( graphic_obj = g, 
                             df_lib = df_lib, 
                             mod = mod, 
                             Isoform_Target_Charge = Isoform_Target_Charge,
@@ -181,7 +194,8 @@ curateXICplot <- function( pep,
     
     ## INTERSECTING
     if ( plotDetecting==T ){
-      g <- mstools::getXIC( graphic_obj = g, 
+      MazamaCoreUtils::logger.trace( paste0("[DrawAlignR::curateXICplot] Getting Detecting Transitions XIC") )
+      g <- getXIC( graphic_obj = g, 
                             df_lib = df_lib, 
                             mod = mod, 
                             Isoform_Target_Charge = Isoform_Target_Charge,
@@ -204,7 +218,8 @@ curateXICplot <- function( pep,
     ##    IDENTIFYING TRANSITIONS    ##
     ##*******************************##
     if ( plotIdentifying==T ){
-      g <- mstools:: getXIC( graphic_obj = g, 
+      MazamaCoreUtils::logger.trace( paste0("[DrawAlignR::curateXICplot] Getting Identifying Transitions XIC") )
+      g <-  getXIC( graphic_obj = g, 
                              df_lib = df_lib, 
                              mod = mod, 
                              Isoform_Target_Charge = Isoform_Target_Charge,
@@ -227,16 +242,17 @@ curateXICplot <- function( pep,
       g <- g$graphic_obj
       
     } else {
-      MazamaCoreUtils::logger.warn(crayon::red('-- Identifying Transitions were not found for: ', crayon::underline(mod)), '\n', sep='')
+      MazamaCoreUtils::logger.warn('[DrawAlignR::curateXICplot] Identifying Transitions were not found for: ', mod, sep='')
     }
     tictoc::toc()
     
     tryCatch(
       expr = {
+        MazamaCoreUtils::logger.trace( paste0("[DrawAlignR::curateXICplot] Adding OpenSwath Identification results") )
         ##*******************************##
         ##     ADD OSW RESULTS INFO      ##
         ##*******************************##
-        g <- mstools::getXIC( graphic_obj = g, 
+        g <- getXIC( graphic_obj = g, 
                               df_lib = df_lib, 
                               mod = mod, 
                               Isoform_Target_Charge = Isoform_Target_Charge,
@@ -254,22 +270,23 @@ curateXICplot <- function( pep,
                               show_peak_info_tbl=show_peak_info_tbl,
                               FacetFcnCall=FacetFcnCall, 
                               show_legend = show_legend  )
+        MazamaCoreUtils::logger.trace(sprintf("[DrawAlignR::curateXICplot] class(g): ", class(g)))
         max_Int <- g$max_Int
         g <- g$graphic_obj
-        
+        MazamaCoreUtils::logger.trace(sprintf("[DrawAlignR::curateXICplot] Done adding OpenSwath Identification results"))
       }, 
       error = function(e){
-        message(sprintf("[DrawAlignR::curateXICplot] There was the following error that occured while adding OSW results info: %s\n", e$message))
+        message(sprintf("[DrawAlignR::curateXICplot] There was the following error that occured while adding OSW results info: %s", e$message))
       }
     ) # End tryCatch
     
     graphics.off()
-    
+    MazamaCoreUtils::logger.trace(sprintf("[DrawAlignR::curateXICplot] Returning final annotated XIC plot object"))
     return( g )
     
   }, error=function(e){
     
-    MazamaCoreUtils::logger.error( paste(crayon::red('There was an issue trying to process ', crayon::underline(pep), ' from run: '), crayon::underline(run), '\n', sep='') )
+    MazamaCoreUtils::logger.error( paste('[DrawAlignR::curateXICplot] There was an issue trying to process ', pep, ' from run: ', run, sep='') )
     stop(e$message)
     
   })
